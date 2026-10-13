@@ -10,5 +10,4 @@ public class OrdaApplication extends SpringBootServletInitializer {
     protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
         return application.sources(OrdaApplication.class);
     }
-
 }

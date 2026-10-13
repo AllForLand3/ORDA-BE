@@ -78,3 +78,7 @@ powershell -ExecutionPolicy Bypass -File scripts/start-db-tunnel.ps1 -KeyPath "<
 컴퓨터를 재시작하면 SSH 터널도 다시 열어야 합니다. DB 테이블 자동 생성은 비활성화되어 있습니다.
 애플리케이션 시작만으로 DB 인증까지 검증되는 것은 아니며 실제 DB 조회로 확인해야 합니다.
 
+## 코드 포맷 및 린트
+
+Java 코드는 공백 4칸을 사용합니다. Spotless의 google-java-format AOSP 스타일로
+들여쓰기, 공백, import, 줄바꿈을 정리합니다. 줄바꿈은 LF, 인코딩은 UTF-8입니다.
