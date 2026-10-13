@@ -1,0 +1,7 @@
+# Copy to your user home directory: .orda/application-local.yml
+# Open the SSH tunnel before starting Tomcat.
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:15432/gwanak_dev
+    username: gwanak_dev
+    password: "REPLACE_WITH_DB_PASSWORD"

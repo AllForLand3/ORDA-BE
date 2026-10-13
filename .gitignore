@@ -35,3 +35,5 @@ data/*
 *.dbf
 *.prj
 *.sql.gz
+application-local.yml
+.orda/

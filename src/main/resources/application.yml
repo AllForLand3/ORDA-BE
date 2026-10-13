@@ -1,0 +1,20 @@
+spring:
+  config:
+    import: "file:${user.home}/.orda/application-local.yml"
+  application:
+    name: orda-api
+  sql:
+    init:
+      mode: never
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 8
+      connection-timeout: 10000
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    arg-name-based-constructor-auto-mapping: true
