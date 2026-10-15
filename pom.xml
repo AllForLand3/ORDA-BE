@@ -14,7 +14,8 @@
   <name>orda-api</name>
   <properties>
     <java.version>17</java.version>
-    <tomcat.version>8.5.95</tomcat.version>
+    <!-- Deployment requirement only; keep dependency versions managed by Spring Boot. -->
+    <external.tomcat.version>8.5.95</external.tomcat.version>
     <egovframe.version>4.1.0</egovframe.version>
     <mybatis-spring-boot.version>2.3.2</mybatis-spring-boot.version>
     <springdoc.version>1.8.0</springdoc.version>
