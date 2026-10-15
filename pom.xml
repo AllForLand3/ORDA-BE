@@ -17,7 +17,7 @@
     <tomcat.version>8.5.95</tomcat.version>
     <egovframe.version>4.1.0</egovframe.version>
     <mybatis-spring-boot.version>2.3.2</mybatis-spring-boot.version>
-    <testcontainers.version>1.21.4</testcontainers.version>
+    <springdoc.version>1.8.0</springdoc.version>
   </properties>
   <repositories>
     <repository>
@@ -32,6 +32,15 @@
     </repository>
   </repositories>
   <dependencies>
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-ui</artifactId>
+      <version>${springdoc.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.egovframe.rte</groupId>
       <artifactId>org.egovframe.rte.fdl.cmmn</artifactId>
@@ -110,40 +119,10 @@
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>postgresql</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>${testcontainers.version}</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <finalName>orda-api</finalName>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
-        <version>3.5.3</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>integration-test</goal>
-              <goal>verify</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>

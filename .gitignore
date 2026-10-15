@@ -36,4 +36,5 @@ data/*
 *.prj
 *.sql.gz
 application-local.yml
+!src/main/resources/application-local.yml
 .orda/
