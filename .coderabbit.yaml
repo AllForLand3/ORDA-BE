@@ -1,0 +1,118 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: ko-KR
+early_access: false
+tone_instructions: "한국어로 근거와 영향, 실행 가능한 수정안을 간결하게 설명하세요. 실제 결함을 우선하고 취향에 따른 리팩터링은 피하세요."
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      - "^dev$"
+      - "^main$"
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        ORDA는 GIS 기반 개인 맞춤형 등산 코스 탐색·분석 서비스다. 변경된 코드의 정확성, 보안, 데이터 정합성과 회귀 위험을 우선 검토한다.
+        Java 17, Spring Boot 2.7.18, eGovFrame 4.1.0, 외부 Tomcat 8.5.95 WAR 배포는 현재 고정 조건이다. Tomcat 업그레이드나 내장 서버 전환을 이 PR의 필수 수정으로 요구하지 않는다. 고정 환경에서 발생하는 실제 호환성·보안 결함은 구체적으로 보고한다.
+        협업 규칙은 docs/git-convention.md를 따른다. 기본 브랜치는 dev이며 새 작업 브랜치는 feature/{domainName}-{detail}, refactor/{domainName}-{detail}, fix/{domainName}-{detail}이다. 일반 PR은 dev, 릴리스 PR은 dev에서 main으로 향한다. main 직접 push는 금지다. 기존 작업 브랜치 이름을 바꾸도록 강제하지 않는다.
+        커밋은 type: 작업 내용, PR 제목은 [타입] 제목 (#이슈번호)다. 커밋 타입은 feat/fix/docs/style/refactor/test/chore/design/comment/rename/remove/!HOTFIX이며 Issue 제목은 [FEAT] 또는 [BUG]다. PR에는 관련 이슈·작업 내용·테스트 결과·리뷰 포인트·체크리스트가 필요하다. 실제 메타데이터를 확인할 수 있을 때 검토한다.
+        저장소의 실제 설정, 승인된 API 계약과 관련 문서를 확인한다. 미확정 테이블, SRID, 인증 방식, API 필드를 추측하지 않는다.
+        문서 간 충돌은 근거와 함께 질문으로 제시한다. 폴더 예시를 이유로 불필요한 파일이나 계층을 요구하지 않는다.
+        현재 사용자 요청으로 헬스체크 API와 자동 테스트 코드·의존성을 제거한 상태다. 이번 초기 세팅에 이를 다시 추가하도록 요구하지 않는다. 향후 기능의 실제 결함과 검증 한계는 해당 변경 범위에서 검토한다.
+        기능 패키지는 com.allforland.orda.domain 아래 trail(공용), course(1조), route(2조), analysis(3조)에 두고 공통 예외·오류 응답·설정은 common에 둔다. Mapper XML은 src/main/resources/sqlmap/<domain>/*.xml이다. 예시의 compose.yaml과 초기 스키마 SQL은 현재 저장소에 없으며 원본 없이 생성하도록 요구하지 않는다.
+        비밀정보와 개인정보 노출, 예외 은폐, 테스트 삭제·비활성화와 요청 범위 밖 변경을 확인한다.
+        거리·고도·시간·경사의 단위와 산정 근거, 출처·기준일·미확인 상태를 보존한다. 경험 수준 프리셋을 검증된 체력 예측으로 취급하지 않는다.
+        변경된 기능에 해당할 때 코스 형상 변경 후 분석 무효화, 코스 버전과 캐시·저장·출력의 일치, 최대 3개 중복 없는 후보를 확인한다.
+        전체 MVP가 한 PR에 없다는 이유로 지적하지 않는다. 리뷰 봇의 결과는 팀원의 최소 1명 리뷰를 대체하지 않는다.
+        API 명세는 초안이고 테이블 정의서와 일부 충돌한다. 아래 계약 확인 지침과 docs/contract-decisions.md를 적용하며 미합의 모델을 구현에 강제하지 않는다. 원문 명세가 저장소에 없으면 아래 요약을 검증된 스키마로 취급하지 않는다.
+        문서 정합성: 제공된 검토 메모상 테이블 정의서는 18개 테이블과 course.geom/rev_no 덮어쓰기 모델이며, API 초안은 불변 course_revision, network_version, routing_run_condition, route_condition, processing_rule, import_job, comparison_snapshot/item, saved_course 등을 추가로 전제한다.
+        이 테이블들이 정의서에 없다는 이유만으로 새로 만들도록 권하지 않는다. 해당 기능 변경에 영향이 있을 때 실제 migration·합의된 명세를 확인하고, 확인되지 않으면 모델 선택이 필요한 질문으로 보고한다.
+        API 초안 내부에도 edge_seq를 단일 bigint로 설명하는 메모가 있지만 테이블 정의서는 bigint[]다. 실제 스키마와 순서·방향 저장 방식을 확인한다.
+        course 생성 코드는 정의서 IMPORT/DRAW/CANDIDATE_COPY, API DB 메모 FROM_CANDIDATE, 응답 FROM_ROUTE_CANDIDATE가 다르다. 난이도 NORMAL/MODERATE·EXPERT, 분석 완료 DONE/COMPLETED, 시설 유형도 다르므로 명시적 변환이나 계약 합의를 확인한다. DB 코드와 DTO 코드를 무조건 같게 만들지 않는다.
+        사용자 GPX 입력은 기존 MVP에서 제외되지만 API D-01에는 포함된다. 구현 범위 합의 전까지 입력 기능의 추가·제거를 강제하지 않는다.
+        로그인·비밀번호 저장·Refresh Token 정책, 비로그인 후보의 로그인 후 저장 권한, 코스 공개 범위와 장기 계보 보존은 미확정 사항이다. 누락된 컬럼이나 인증 정책을 임의로 확정하지 않는다.
+    - path: "**/*.java"
+      instructions: |
+        Spring MVC·MyBatis 구조를 기준으로 검토한다. JPA/Hibernate 도입이나 기술 교체를 근거 없이 권하지 않는다. Boot 2.7과 Servlet 3.1의 javax API를 유지한다.
+        Controller는 HTTP 입력·검증·Service 호출·응답 변환을 담당하고 비즈니스 규칙과 원자적 변경의 트랜잭션은 Service에서 관리한다.
+        요청·응답 DTO, Bean Validation, 생성자 주입, 서버 측 인증·인가와 사용자별 코스 소유권 검증을 확인한다.
+        미존재·빈 목록·잘못된 입력·권한 부족을 구분하고 HTTP 상태와 안전한 공통 오류 계약을 유지한다.
+        Mapper와 XML의 namespace, statement id, 파라미터 및 결과 매핑을 확인한다. 불필요한 인터페이스나 전달 계층을 강제하지 않는다.
+        공통 REST 계약: /api를 기준으로 자원·작업 상태를 직접 반환한다. 근거 없이 공통 data 래퍼를 추가하지 않는다. 목록 items/page/size/totalElements/totalPages, page 0부터, size 기본 20·최대 100은 API 초안 기준이며 실제 합의를 확인한다.
+        정렬 식별자는 허용 목록으로 제한한다. 목록 외에 고도 샘플 배열 같은 응답에 페이지네이션을 강제하지 않는다.
+        bigint ID는 JSON 문자열 반환 권장사항이다. 실제 합의된 DTO를 확인하고 안전 정수 범위 초과 손실을 검토한다. 날짜·시간은 ISO-8601 UTC 의미를 보존한다.
+        FE 오류 계약 status/code/message와 API 초안 code/message/details/traceId의 차이는 docs/contract-decisions.md와 현재 구현을 먼저 확인한다. 호환 필드를 근거 없이 제거하지 않는다. HTTP 상태와 body status가 있으면 일치해야 한다.
+        400/401/403/404/409/422/429/500 의미를 확인한다. 공간·도메인 검증 422를 일반 입력 오류 400으로 일괄 변경하지 않는다.
+        PUBLIC/USER/ADMIN 경계는 실제 승인된 인증 정책을 따른다. 코스·버전·후보 실행·가져오기 작업·분석·비교·보관 조회에도 대상 자원의 접근 권한을 확인한다. 클라이언트 owner_user_id나 role을 신뢰하지 않는다.
+        /api/admin/** 구현 시 ADMIN 필수이며 구축 작업의 검증·반영·활성화 단계를 구분한다. 공개 계보·오류 응답에 내부 파일 경로, SQL, 검수자 개인정보를 노출하지 않는다.
+        Idempotency-Key는 탐색·분석·가져오기 POST의 선택 기능이다. 구현한 경우 요청자·작업 종류·payload 범위를 고려해 중복 작업과 다른 사용자의 결과 재사용을 막는다. 키 없는 요청을 무조건 거부하도록 요구하지 않는다.
+    - path: "**/*.{java,xml,sql,py}"
+      instructions: |
+        좌표 계약: API 입출력은 EPSG:4326 GeoJSON [longitude, latitude], crs 객체 없음이며 저장·거리 공간연산 EPSG:5179는 제공된 명세 기준이다. 실제 스키마를 대조하고 지도 표시 EPSG:3857을 DB 저장 CRS로 사용하지 않는다.
+        명세상 service_area는 MultiPolygon, course/raw_trail/trail_edge/route_candidate는 LineString, 주요지점·노드·시설은 Point다. 산 소속·서비스 영역·좌표 유효성 검증과 명시적 변환을 확인한다.
+        ST_SetSRID로 좌표값을 변환했다고 간주하지 않는다. 공간 인덱스 활용을 고려하되 실제 스키마의 SRID를 문서만 보고 자동 변경하지 않는다.
+        course metadata 수정은 형상 버전을 증가시키지 않는다. 형상 변경과 분석 무효화는 원자적으로 처리하고 동시 수정으로 갱신이 유실되지 않게 한다.
+        revision 모델이 승인된 경우 POST /api/courses/{courseId}/revisions의 expectedRevNo 충돌은 409, 기존 형상은 보존, 현재 revision은 코스당 하나로 유지한다. 덮어쓰기 모델에서는 course_id+rev_no로 분석 일치를 확인한다.
+        course 삭제는 명세상 del_yn='Y'이며 일반 삭제를 물리삭제로 구현하지 않는다. 삭제 코스의 분석·출력·보관 접근도 같은 정책을 따른다. 후보 저장은 형상을 복사하고 원본 후보를 변경하지 않는다.
+        시설 조회의 radiusM는 API 초안 기준 기본 300, 범위 1~2000m다. 거리 기준은 시작점이 아닌 코스 선형의 최소거리이며 필터 결과와 countsByType의 집계 범위가 같아야 한다.
+        dup_of_facility_id/dup_of_spot_id 대표 정책과 검증상태를 적용해 중복 집계를 막는다. 일반 사용자의 includeUnverified 처리 정책은 합의를 확인한다.
+        trail_spot.src_geom은 원천 위치이며 검수는 geom에 반영한다. spot_tag의 spot_id+tag_cd와 spot_edge_match의 spot_id+edge_id 정합성, dist_m>=0 및 pos_ratio 0~1을 확인한다.
+        stair_spot_cnt는 계단의 물리적 개수가 아니라 계단 관련 지점 수다. 다중 태그·매칭으로 수가 증폭되지 않도록 검증상태와 대표지점 정책을 확인한다.
+        원천 식별자 UNIQUE는 dataset_id와 결합하는 의미인지 확인한다. 정의서의 여러 UK 표기를 개별 컬럼 각각 UNIQUE로 자동 해석하지 않는다.
+        terrain_analysis는 덮어쓰기 모델의 course_id+rev_no+dem_id+sample_itv_m 또는 승인된 revision 모델의 course_rev_id+dem_id+terrain_rule_id+sample_itv_m로 중복과 캐시 범위를 구분한다.
+        READY·사용 가능한 DEM의 범위·CRS·DTM/DSM·nodata를 검증한다. elevation_sample의 analysis_id+seq_no 순서와 거리, NULL 고도와 missing_cnt를 보존한다.
+        분석 진행 REQUESTED/RUNNING과 실패 FAILED를 완료로 처리하지 않는다. DB DONE과 API COMPLETED는 명시적 매핑을 확인하며 fallback 결과는 분석 ID·코스 버전과 함께 구분한다.
+    - path: "**/*.{java,xml,sql}"
+      instructions: |
+        경로 탐색 POST /api/routing-runs는 API 초안상 mountainId/startPlaceId/endPlaceId를 받는다. placeId와 nodeId를 같은 식별자로 취급하지 말고 해당 산의 검증·사용 가능한 지점과 네트워크 노드 연결을 확인한다.
+        maxCandidates는 초안상 1~3, 기본 3이다. 같은 실행 안에서 경로해시 중복을 제거하고 rank_no·cand_cnt와 실제 후보 수를 일치시킨다. 서로 다른 실행의 같은 경로를 전역 UNIQUE로 막지 않는다.
+        네트워크 버전 모델이 승인되면 산별 active는 하나만 유지하며 활성화는 트랜잭션·DB 제약으로 보호한다. 기존 후보는 탐색 당시 버전을 참조하며 구축만으로 자동 활성화하지 않는다.
+        고정 조건 dist_first_yn/gentle_slope_yn/less_stair_yn 모델과 conditions 배열 모델 중 승인된 모델을 따른다. 배열 모델이면 condCd별 값 타입·범위·단위·viaPlaceId와 활성 조건을 검증한다.
+        pass_yn='N' 또는 제외된 원천 구간을 탐색에 포함하지 않는다. UNKNOWN 방향을 확정된 오르막으로 취급하지 않고 역방향의 시간·상승·하강 의미를 검증한다.
+        경로 오류 MOUNTAIN_NOT_FOUND/PLACE_NOT_FOUND는 404, ACTIVE_NETWORK_NOT_FOUND는 409, PLACE_NOT_CONNECTED/ROUTING_NO_PATH는 422, INVALID_ROUTE_CONDITION은 400이라는 API 초안 기준을 승인된 구현과 대조한다.
+        비교 기능이 승인되면 candidateIds+courseRevIds 총 1~3개, 접근 권한·산 일치·추천 대상의 포함 여부를 검증한다. 저장 시점 지표·규칙 버전은 최신 값으로 조용히 바꾸지 않는다.
+        saved_course 모델이 승인되면 후보를 새 course로 복사하는 기능과 기존 course를 보관하는 기능을 구분한다. 사용자+코스 중복 보관, 보관 해제가 원본 코스를 삭제하지 않는지 확인한다.
+    - path: "**/*.xml"
+      instructions: |
+        MyBatis Mapper XML이면 interface와 매핑 정합성을 확인한다. 사용자 값은 바인딩하고 동적 식별자는 서버 허용 목록으로 제한한다.
+        Mapper XML의 sqlmap/<domain> 배치와 application.yml의 classpath*:sqlmap/**/*.xml 검색 경로가 일치하는지 확인한다. interface는 com.allforland.orda.domain.<domain> 아래 필요한 mapper 계층에 둔다.
+        조건 누락에 따른 전체 수정·삭제, 영향 행 수 누락, 무제한 조회, 불필요한 SELECT *와 N+1을 확인한다.
+        공간 SQL이면 SRID·축 순서·단위·Geometry 유형, 변환 위치, 공간 인덱스 사용과 검색 범위를 확인한다.
+        Maven 설정이면 기존 버전과 의존성 호환성, 중복 의존성, 비밀정보 포함 여부를 확인한다. 외부 Tomcat 버전은 pom의 속성만으로 변경되지 않는다.
+    - path: "**/*.sql"
+      instructions: |
+        PostgreSQL·PostGIS·pgRouting 기준으로 값 바인딩, 변경 조건, 제약조건, 동시성 및 공간 인덱스 활용을 검토한다.
+        서로 다른 SRID를 암묵적으로 연산하거나 경위도 좌표의 거리값을 미터로 해석하지 않는다. ST_SetSRID와 ST_Transform의 의미를 구분한다.
+        경로는 검증된 Node/Edge와 비용을 사용하며 방향·통행 제한, 스냅 범위, 단절·경로 없음·스냅 실패를 구분한다. 공용 네트워크를 사용자 편집 때문에 변경하지 않는다.
+    - path: "**/db/migration/*.sql"
+      instructions: |
+        Flyway 파일명 VyyyyMMddHHmmss__description.sql과 영문 snake_case 설명, timestamp 중복 여부를 확인한다.
+        이미 공유되거나 적용된 migration은 수정하지 않고 새 파일로 변경한다. 적용 여부를 확인할 수 없으면 단정하지 말고 확인을 요청한다.
+        기존 데이터, 잠금, 배포 순서, 애플리케이션 호환성, 파괴적 변경의 승인 및 복구 계획을 검토한다. 수동 DDL로 이력을 우회하지 않는다.
+    - path: "**/*.py"
+      instructions: |
+        GIS ETL·분석 코드이면 GDAL/Rasterio의 CRS, nodata, 래스터 범위 밖 표본, 해상도, 자원 해제를 확인한다.
+        DEM 결측을 고도 0으로 대체하거나 분석값을 만들어 내지 않는다. 고도 표본의 순서·단위와 코스 버전·분석 캐시 키를 보존한다.
+    - path: "**/src/test/**"
+      instructions: |
+        변경된 계약과 오류·경계 조건을 검증한다. 공간 SQL과 migration은 실제 PostgreSQL/PostGIS 동작을 검증하는 테스트가 필요한지 확인한다.
+        SQL 자체를 모킹하거나 다른 DB 테스트만으로 공간 연산 검증을 대체하지 않는다. 권한, 단절, 무효 Geometry, 좌표와 거리 단위를 확인한다.
+        Docker 없는 환경에서 통합 테스트가 실행되지 않았으면 통과로 보고하지 않는다. 공유 AWS DB를 테스트 대상으로 사용하지 않는다.
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "docs/*convention.md"
+      - "docs/architecture.md"
+      - "docs/api-spec*.md"
+      - "docs/table-definition*.md"
+      - "docs/contract-decisions.md"
+chat:
+  auto_reply: true
