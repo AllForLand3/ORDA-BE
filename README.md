@@ -27,6 +27,7 @@ Spotless, Checkstyle, Java 컴파일과 WAR 패키징을 실행합니다.
 
 1. `application-local.yml.example`을 사용자 홈의 `.orda/application-local.yml`로 복사해 실제 DB 접속 정보를 입력합니다.
    Windows 예: `C:\Users\사용자명\.orda\application-local.yml`.
+   `REPLACE_WITH_DB_NAME`, `REPLACE_WITH_DB_USERNAME`, `REPLACE_WITH_DB_PASSWORD`를 팀 내부에서 공유받은 값으로 바꿉니다.
    저장소의 `src/main/resources/application-local.yml`은 외부 파일을 읽는 공개 설정이며 비밀번호를 넣지 않습니다.
 2. SSH 터널을 별도 터미널에서 실행합니다.
 3. IntelliJ Tomcat 실행 설정의 VM options에 `-Dspring.profiles.active=local`을 지정합니다.
@@ -34,12 +35,37 @@ Spotless, Checkstyle, Java 컴파일과 WAR 패키징을 실행합니다.
 5. FE와 함께 개발할 때 Deployment의 **Application context를 `/`**로 지정합니다.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/start-db-tunnel.ps1 -KeyPath "<pem 파일 경로>"
+powershell -ExecutionPolicy Bypass -File scripts/start-db-tunnel.ps1 `
+    -KeyPath "<pem 파일 경로>" `
+    -ServerHost "<서버 주소>" `
+    -SshUser "<SSH 계정>" `
+    -RemoteDbPort "<서버 측 DB 포트>"
 ```
 
-터널은 로컬 `127.0.0.1:15432`를 AWS 서버의 `127.0.0.1:55432`에 연결합니다.
+서버 주소·SSH 계정·서버 측 DB 포트는 필수 인자이며 실제 값은 팀 내부에서 공유받습니다.
+터널은 로컬 `127.0.0.1:15432`를 SSH 서버의 `127.0.0.1:<서버 측 DB 포트>`에 연결합니다.
 터미널을 열어두고, 같은 포트에 터널이 이미 실행 중이면 중복 실행하지 않습니다.
-최초 접속 시 `ssh -i "<pem 파일 경로>" ubuntu@43.203.221.58`로 서버 호스트 키를 확인하고 등록합니다.
+최초 접속 시 `ssh -i "<pem 파일 경로>" "<SSH 계정>@<서버 주소>"`로 접속하고, 표시된 호스트 키 지문을 서버 담당자에게 확인한 뒤 등록합니다.
+실제 접속 정보와 개인키는 저장소 밖에서 관리하며 README나 스크립트에 직접 적어 커밋하지 않습니다.
+
+매번 인자를 입력하지 않으려면 개인용 실행 파일을 `%USERPROFILE%\.orda\start-db-tunnel.ps1`에 만들 수 있습니다. 아래 예시를 복사한 뒤 경로와 접속 정보를 본인 환경에 맞게 바꾸세요. 이 파일은 저장소 밖에 두고 공유 저장소에 커밋하지 않습니다.
+
+```powershell
+$repoPath = 'C:\path\to\ORDA-BE'
+
+& (Join-Path $repoPath 'scripts\start-db-tunnel.ps1') `
+    -KeyPath 'C:\path\to\team-key.pem' `
+    -ServerHost 'team-server.example.com' `
+    -SshUser 'team-user' `
+    -RemoteDbPort 12345
+```
+
+`C:\path\to\...`, `team-server.example.com`, `team-user`, `12345`는 예시이므로 팀에서 전달받은 값으로 바꿉니다. 개인용 파일에는 `.pem` 경로만 지정하고 키 내용이나 DB 비밀번호를 넣지 않습니다. 저장한 파일은 다음과 같이 실행합니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.orda\start-db-tunnel.ps1"
+```
+
 `SPRING_DATASOURCE_*` 환경 변수는 파일보다 우선하므로 로컬 파일과 중복 설정하지 않습니다.
 기존 설정과 달리 이제 **local 프로필을 명시해야 개인 파일을 읽습니다.**
 

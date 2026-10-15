@@ -2,6 +2,6 @@
 # Open the SSH tunnel before starting Tomcat.
 spring:
   datasource:
-    url: jdbc:postgresql://127.0.0.1:15432/gwanak_dev
-    username: gwanak_dev
+    url: jdbc:postgresql://127.0.0.1:15432/REPLACE_WITH_DB_NAME
+    username: REPLACE_WITH_DB_USERNAME
     password: "REPLACE_WITH_DB_PASSWORD"
