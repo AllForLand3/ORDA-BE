@@ -1,6 +1,6 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: 버그 보고
+about: 버그와 재현 방법, 기대 동작을 작성합니다.
 title: "[BUG] "
 labels: ''
 assignees: ''
@@ -22,10 +22,9 @@ assignees: ''
 ## 🔁 재현 방법
 <!-- 버그를 재현하는 방법을 단계별로 작성해주세요. -->
 
-1. 
-2. 
-3. 
-4. 
+1. 재현 환경:
+2. 수행한 요청 또는 동작:
+3. 실제 결과:
 
 ## ✅ 기대 동작
 <!-- 원래 정상적으로 동작해야 하는 방식이 무엇인지 작성해주세요. -->
