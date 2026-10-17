@@ -99,7 +99,7 @@ FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps
 이 구성은 CI/CD 없이 EC2에서 WAR와 Docker 이미지를 직접 빌드해 실행하는 초기 확인용입니다. DB 컨테이너는 만들지 않고, EC2에 설치된 PostgreSQL에 연결합니다.
 
 1. EC2에 Docker Engine과 Docker Compose 플러그인을 설치하고 저장소를 준비합니다.
-2. 저장소 루트에서 `bash ./mvnw clean package`를 실행해 `target/orda-api.war`를 만듭니다. Windows에서 빌드한다면 `target/orda-api.war`도 EC2에 복사합니다.
+2. 저장소 루트에서 `bash ./mvnw clean package`를 실행해 `target/orda-api.war`를 만듭니다. Windows에서 `.\mvnw.cmd clean package`로 빌드한다면, 먼저 EC2 저장소 루트에서 `mkdir -p target`을 실행한 뒤 Windows의 `target/orda-api.war`를 EC2의 해당 디렉터리에 복사합니다.
 3. `.env.example`을 `.env`로 복사하고 운영 DB URL, 사용자명, 비밀번호를 입력합니다. `.env`는 Git에서 제외됩니다.
 4. EC2에서 `docker compose up --build -d`로 이미지를 만들고 컨테이너를 시작합니다.
 
@@ -113,7 +113,13 @@ docker compose logs -f backend
 WAR는 `orda-api.war` 이름으로 배포되므로 애플리케이션 경로는 `/orda-api`입니다. Compose는 컨테이너의 8080 포트를 EC2의 `127.0.0.1:8080`에만 연결하므로 외부에서 직접 접근할 수 없습니다. 개발 PC에서 확인하려면 SSH 터널을 엽니다.
 
 ```powershell
-ssh -i "<pem 파일 경로>" -N -L 18080:127.0.0.1:8080 ubuntu@<EC2 공인 IP>
+ssh -i "<pem 파일 경로>" -N -L 18080:127.0.0.1:8080 "<SSH 계정>@<EC2 공인 IP>"
+```
+
+`<SSH 계정>`은 서버 담당자가 안내한 실제 로그인 계정으로 바꿉니다. 예를 들어 계정이 `ubuntu`이고 개인키가 `C:\keys\orda.pem`, EC2 공인 IP가 `203.0.113.10`이라면 다음과 같이 실행합니다. 아래 경로와 IP는 설명용 예시이므로 실제 값으로 바꿉니다.
+
+```powershell
+ssh -i "C:\keys\orda.pem" -N -L 18080:127.0.0.1:8080 "ubuntu@203.0.113.10"
 ```
 
 터널을 켜 둔 상태에서 `http://localhost:18080/orda-api`로 접속합니다. 이 주소는 Tomcat 배포 확인용이며, 실제 API 경로는 기능 구현 후 확인합니다.
