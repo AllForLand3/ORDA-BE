@@ -116,7 +116,10 @@ public class CourseService {
         if (request.geometryPresent()) {
             requireMountain(row.mountainId());
             geometry = prepareGeometry(geometryJson, row.mountainId(), id);
-            geometryChanged = !Boolean.TRUE.equals(geometry.sameGeometry());
+            // API 좌표가 같으면 좌표계 왕복 변환 오차로 형상 버전을 올리지 않는다.
+            boolean sameApiGeometry =
+                    current.geometry().coordinates().equals(request.geometry().coordinates());
+            geometryChanged = !sameApiGeometry && !Boolean.TRUE.equals(geometry.sameGeometry());
         }
         if (!geometryChanged
                 && Objects.equals(name, row.courseName())
