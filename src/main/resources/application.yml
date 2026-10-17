@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: orda-api
+  sql:
+    init:
+      mode: never
+  flyway:
+    # Enable only after the existing schema and migration baseline are reviewed.
+    enabled: false
+    clean-disabled: true
+    baseline-on-migrate: false
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 8
+      connection-timeout: 10000
+  jackson:
+    time-zone: UTC
+    serialization:
+      write-dates-as-timestamps: false
+mybatis:
+  mapper-locations: classpath*:sqlmap/**/*.xml
+  configuration:
+    arg-name-based-constructor-auto-mapping: true
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+logging:
+  pattern:
+    level: "%5p [traceId:%X{traceId:-}]"

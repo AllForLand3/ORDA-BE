@@ -1,0 +1,8 @@
+spring:
+  config:
+    import: "file:${user.home}/.orda/application-local.yml"
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

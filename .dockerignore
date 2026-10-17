@@ -1,0 +1,11 @@
+.git
+.github
+.idea
+.vscode
+*.iml
+.env
+.env.*
+!.env.example
+.orda
+target/*
+!target/orda-api.war
