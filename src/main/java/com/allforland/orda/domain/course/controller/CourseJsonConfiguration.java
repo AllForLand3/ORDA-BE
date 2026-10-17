@@ -8,13 +8,16 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -44,10 +47,29 @@ public class CourseJsonConfiguration implements WebMvcConfigurer {
         @Override
         protected Object readInternal(Class<?> type, HttpInputMessage inputMessage)
                 throws IOException {
+            return readStrict(type, inputMessage);
+        }
+
+        /** Spring MVC의 제네릭 읽기 경로에도 문자열 타입 검증을 적용한다. */
+        @Override
+        public Object read(Type type, Class<?> contextClass, HttpInputMessage inputMessage)
+                throws IOException {
+            return readStrict((Class<?>) type, inputMessage);
+        }
+
+        private Object readStrict(Class<?> type, HttpInputMessage inputMessage) throws IOException {
             byte[] body = inputMessage.getBody().readAllBytes();
-            JsonNode request = getObjectMapper().readTree(body);
-            validateStringFields(request, type);
-            return getObjectMapper().readValue(body, type);
+            try {
+                JsonNode request = getObjectMapper().readTree(body);
+                validateStringFields(request, type);
+                return getObjectMapper().readValue(body, type);
+            } catch (InvalidDefinitionException exception) {
+                throw new HttpMessageConversionException(
+                        "Cannot deserialize course request", exception);
+            } catch (JsonProcessingException exception) {
+                throw new HttpMessageNotReadableException(
+                        "Invalid course request JSON", exception, inputMessage);
+            }
         }
 
         @Override
