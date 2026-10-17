@@ -1,4 +1,4 @@
-package com.allforland.orda.course.dto;
+package com.allforland.orda.domain.course.dto;
 
 import com.allforland.orda.common.geo.LineStringGeometry;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;

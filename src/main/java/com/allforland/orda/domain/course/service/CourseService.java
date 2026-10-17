@@ -1,14 +1,14 @@
-package com.allforland.orda.course.service;
+package com.allforland.orda.domain.course.service;
 
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.common.geo.LineStringGeometry;
-import com.allforland.orda.course.dto.CourseCreateRequest;
-import com.allforland.orda.course.dto.CourseDetailResponse;
-import com.allforland.orda.course.dto.CourseUpdateRequest;
-import com.allforland.orda.course.mapper.CourseMapper;
-import com.allforland.orda.course.vo.CourseGeometryRow;
-import com.allforland.orda.course.vo.CourseRow;
+import com.allforland.orda.domain.course.dto.CourseCreateRequest;
+import com.allforland.orda.domain.course.dto.CourseDetailResponse;
+import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
+import com.allforland.orda.domain.course.mapper.CourseMapper;
+import com.allforland.orda.domain.course.vo.CourseGeometryRow;
+import com.allforland.orda.domain.course.vo.CourseRow;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;

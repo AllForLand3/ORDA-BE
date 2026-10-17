@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.allforland.orda.course.mapper.CourseMapper">
-  <resultMap id="courseResult" type="com.allforland.orda.course.vo.CourseRow">
+<mapper namespace="com.allforland.orda.domain.course.mapper.CourseMapper">
+  <resultMap id="courseResult" type="com.allforland.orda.domain.course.vo.CourseRow">
     <constructor>
       <idArg column="course_id" javaType="java.lang.Long"/>
       <arg column="mountain_id" javaType="java.lang.Long"/>
@@ -75,7 +75,7 @@
     WHERE course_id = #{courseId} AND owner_user_id = #{ownerUserId} AND del_yn = 'N'
   </update>
 
-  <resultMap id="geometryResult" type="com.allforland.orda.course.vo.CourseGeometryRow">
+  <resultMap id="geometryResult" type="com.allforland.orda.domain.course.vo.CourseGeometryRow">
     <constructor>
       <arg column="geometry_hex" javaType="java.lang.String"/>
       <arg column="length_m" javaType="java.math.BigDecimal"/>
