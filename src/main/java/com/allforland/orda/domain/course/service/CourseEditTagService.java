@@ -1,8 +1,8 @@
-package com.allforland.orda.course.service;
+package com.allforland.orda.domain.course.service;
 
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
-import com.allforland.orda.course.dto.CourseDetailResponse;
+import com.allforland.orda.domain.course.dto.CourseDetailResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

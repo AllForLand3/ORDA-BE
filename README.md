@@ -147,7 +147,7 @@ Flyway 의존성과 안전 설정을 준비했지만 자동 migration은 기본 
 기본 브랜치는 `dev`이며 새 작업은 `feature/{domainName}-{detail}`, `refactor/{domainName}-{detail}`, `fix/{domainName}-{detail}`에서 진행합니다.
 작업 PR은 `dev`, 릴리스 PR은 `dev` → `main`으로 생성하며 `main` 직접 push는 금지합니다.
 커밋은 `type: 작업 내용`, PR 제목은 `[타입] 제목 (#이슈번호)`를 사용합니다.
-기능 패키지는 `com.allforland.orda` 바로 아래 도메인별로 둡니다(예: `com.allforland.orda.course`). Mapper XML은 `src/main/resources/sqlmap/<domain>/`에 둡니다.
+기능 패키지는 `com.allforland.orda.domain` 아래 도메인별로 둡니다(예: `com.allforland.orda.domain.course`). Mapper XML은 `src/main/resources/sqlmap/<domain>/`에 둡니다.
 
 - [구조](docs/architecture.md), [백엔드 규칙](docs/backend-convention.md)
 - [API 규칙](docs/api-convention.md), [GIS 규칙](docs/gis-convention.md)

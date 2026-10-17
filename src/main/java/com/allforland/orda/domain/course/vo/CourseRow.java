@@ -1,4 +1,4 @@
-package com.allforland.orda.course.vo;
+package com.allforland.orda.domain.course.vo;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

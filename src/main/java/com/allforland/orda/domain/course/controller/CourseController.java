@@ -1,12 +1,12 @@
-package com.allforland.orda.course.controller;
+package com.allforland.orda.domain.course.controller;
 
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
-import com.allforland.orda.course.dto.CourseCreateRequest;
-import com.allforland.orda.course.dto.CourseDetailResponse;
-import com.allforland.orda.course.dto.CourseUpdateRequest;
-import com.allforland.orda.course.service.CourseEditTagService;
-import com.allforland.orda.course.service.CourseService;
+import com.allforland.orda.domain.course.dto.CourseCreateRequest;
+import com.allforland.orda.domain.course.dto.CourseDetailResponse;
+import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
+import com.allforland.orda.domain.course.service.CourseEditTagService;
+import com.allforland.orda.domain.course.service.CourseService;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.CacheControl;

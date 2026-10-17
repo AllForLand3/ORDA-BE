@@ -1,7 +1,7 @@
-package com.allforland.orda.course.mapper;
+package com.allforland.orda.domain.course.mapper;
 
-import com.allforland.orda.course.vo.CourseGeometryRow;
-import com.allforland.orda.course.vo.CourseRow;
+import com.allforland.orda.domain.course.vo.CourseGeometryRow;
+import com.allforland.orda.domain.course.vo.CourseRow;
 import java.math.BigDecimal;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

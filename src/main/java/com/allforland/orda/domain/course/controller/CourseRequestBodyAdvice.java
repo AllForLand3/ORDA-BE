@@ -1,9 +1,9 @@
-package com.allforland.orda.course.controller;
+package com.allforland.orda.domain.course.controller;
 
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
-import com.allforland.orda.course.dto.CourseCreateRequest;
-import com.allforland.orda.course.dto.CourseUpdateRequest;
+import com.allforland.orda.domain.course.dto.CourseCreateRequest;
+import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
