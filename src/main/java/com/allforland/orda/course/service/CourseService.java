@@ -114,7 +114,9 @@ public class CourseService {
             geometry = prepareGeometry(geometryJson, row.mountainId(), id);
             geometryChanged = !Boolean.TRUE.equals(geometry.sameGeometry());
         }
-        if (!geometryChanged && name.equals(row.courseName()) && Objects.equals(memo, row.memo())) {
+        if (!geometryChanged
+                && Objects.equals(name, row.courseName())
+                && Objects.equals(memo, row.memo())) {
             return current;
         }
         if (geometryChanged && row.revNo() == Integer.MAX_VALUE) {
