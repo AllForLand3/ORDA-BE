@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
+/** API에서 사용하는 GeoJSON LineString이다. */
 @Getter
 @Accessors(fluent = true)
 @JsonAutoDetect(

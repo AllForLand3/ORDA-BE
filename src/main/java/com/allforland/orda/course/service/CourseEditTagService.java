@@ -12,11 +12,13 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import org.springframework.stereotype.Component;
 
+/** 코스 ETag 생성과 If-Match 검증을 담당한다. */
 @Component
 public class CourseEditTagService {
     private final ObjectMapper canonicalMapper =
             JsonMapper.builder().enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY).build();
 
+    /** 코스 응답의 ETag를 계산한다. */
     public String tag(CourseDetailResponse course) {
         try {
             byte[] representation = canonicalMapper.writeValueAsBytes(course);
@@ -29,6 +31,7 @@ public class CourseEditTagService {
         }
     }
 
+    /** If-Match 형식을 검증하고 태그를 반환한다. */
     public String requireIfMatch(String header) {
         if (header == null) {
             throw new BusinessException(ErrorCode.COURSE_PRECONDITION_REQUIRED);
@@ -40,6 +43,7 @@ public class CourseEditTagService {
         return tag;
     }
 
+    /** 요청 태그가 최신 코스 내용과 일치하는지 확인한다. */
     public void verify(String expected, CourseDetailResponse current) {
         if (!tag(current).equals(expected)) {
             throw new BusinessException(ErrorCode.COURSE_EDIT_CONFLICT);

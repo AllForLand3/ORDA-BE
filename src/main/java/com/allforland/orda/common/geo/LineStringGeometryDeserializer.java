@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/** GeoJSON LineString JSON을 형상 객체로 변환한다. */
 public class LineStringGeometryDeserializer extends JsonDeserializer<LineStringGeometry> {
     @Override
     public LineStringGeometry deserialize(JsonParser parser, DeserializationContext context)

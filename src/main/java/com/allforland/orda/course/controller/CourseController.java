@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+/** 코스 CRUD HTTP 요청을 처리한다. */
 @RestController
 @RequestMapping("/api/courses")
 public class CourseController {
@@ -34,6 +35,7 @@ public class CourseController {
         this.editTags = editTags;
     }
 
+    /** 코스 형상을 등록하고 상세 응답과 ETag를 반환한다. */
     @PostMapping
     public ResponseEntity<CourseDetailResponse> create(@RequestBody CourseCreateRequest request) {
         CourseDetailResponse course = service.create(request);
@@ -48,6 +50,7 @@ public class CourseController {
                 .body(course);
     }
 
+    /** 코스 편집에 필요한 상세 정보와 ETag를 조회한다. */
     @GetMapping("/{courseId}")
     public ResponseEntity<CourseDetailResponse> get(@PathVariable String courseId) {
         CourseDetailResponse course = service.get(courseId);
@@ -57,6 +60,7 @@ public class CourseController {
                 .body(course);
     }
 
+    /** 코스 이름, 메모 또는 형상을 부분 수정한다. */
     @PatchMapping("/{courseId}")
     public ResponseEntity<CourseDetailResponse> update(
             @PathVariable String courseId,
@@ -69,6 +73,7 @@ public class CourseController {
                 .body(course);
     }
 
+    /** If-Match를 확인하고 코스를 논리 삭제한다. */
     @DeleteMapping("/{courseId}")
     public ResponseEntity<Void> delete(
             @PathVariable String courseId, @RequestHeader HttpHeaders headers) {
@@ -76,6 +81,7 @@ public class CourseController {
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
+    /** 요청에서 단일 If-Match 값을 읽는다. */
     private String ifMatch(HttpHeaders headers) {
         List<String> values = headers.get(HttpHeaders.IF_MATCH);
         if (values == null || values.isEmpty()) {

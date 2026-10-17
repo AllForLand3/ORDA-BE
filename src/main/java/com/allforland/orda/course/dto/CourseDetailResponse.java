@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
+/** 코스 상세 조회 응답 값을 담는다. */
 @Getter
 @Accessors(fluent = true)
 @AllArgsConstructor

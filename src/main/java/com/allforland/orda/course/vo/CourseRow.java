@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
+/** 코스 조회 결과를 담는 데이터 객체다. */
 @Getter
 @Accessors(fluent = true)
 @AllArgsConstructor

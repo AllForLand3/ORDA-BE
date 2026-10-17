@@ -18,6 +18,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/** 코스 요청 JSON을 엄격하게 파싱하도록 설정한다. */
 @Configuration
 public class CourseJsonConfiguration implements WebMvcConfigurer {
     private final ObjectMapper objectMapper;
