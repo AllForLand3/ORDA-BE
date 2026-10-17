@@ -4,7 +4,7 @@
 
 이 문서는 PostgreSQL 및 공간 확장(PostGIS·pgRouting)을 사용하는 스키마·SQL·MyBatis SQL·Flyway Migration 규칙을 정의한다. 실제 DB 버전, 확장 설치 상태, 스키마명, 테이블명, 컬럼명, SRID와 네트워크 모델은 Repository와 데이터 사전을 확인하며 여기서 임의로 확정하지 않는다. 저장 SRID 기준은 [gis-convention.md](gis-convention.md)를 따른다.
 
-현재 저장소에는 승인된 migration SQL이 없다. Flyway는 의존성만 준비되어 있고 `spring.flyway.enabled=false`다. 기존 DB와 baseline을 확인하고 합의하기 전까지 migration을 실행하거나 초기 스키마를 만들지 않는다.
+현재 저장소에는 승인된 migration SQL이 없다. Flyway 의존성과 기본 설정은 준비되어 있으나 `spring.flyway.enabled=false`다. Migration 위치는 `classpath:db/migration`, 적용 이력 검증은 `validate-on-migrate=true`이며, 기존 DB와 baseline을 확인하고 합의하기 전까지 migration을 실행하거나 초기 스키마를 만들지 않는다.
 
 ## SQL
 

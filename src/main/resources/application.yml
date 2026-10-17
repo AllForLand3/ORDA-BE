@@ -7,8 +7,10 @@ spring:
   flyway:
     # Enable only after the existing schema and migration baseline are reviewed.
     enabled: false
+    locations: classpath:db/migration
     clean-disabled: true
     baseline-on-migrate: false
+    validate-on-migrate: true
   datasource:
     driver-class-name: org.postgresql.Driver
     hikari:
