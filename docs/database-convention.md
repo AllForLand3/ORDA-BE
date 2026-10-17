@@ -4,7 +4,7 @@
 
 이 문서는 PostgreSQL 및 공간 확장(PostGIS·pgRouting)을 사용하는 스키마·SQL·MyBatis SQL·Flyway Migration 규칙을 정의한다. 실제 DB 버전, 확장 설치 상태, 스키마명, 테이블명, 컬럼명, SRID와 네트워크 모델은 Repository와 데이터 사전을 확인하며 여기서 임의로 확정하지 않는다. 저장 SRID 기준은 [gis-convention.md](gis-convention.md)를 따른다.
 
-현재 저장소에는 승인된 migration SQL이 없다. Flyway는 의존성만 준비되어 있고 `spring.flyway.enabled=false`다. 기존 DB와 baseline을 확인하고 합의하기 전까지 migration을 실행하거나 초기 스키마를 만들지 않는다.
+신규 빈 DB용 초기 Migration은 `src/main/resources/db/migration/`에서 관리한다. Flyway는 `spring.flyway.enabled=true`, `locations=classpath:db/migration`, `validate-on-migrate=true`로 실행하며, `baseline-on-migrate=false`와 `clean-disabled=true`를 유지한다. 기존 DB를 Flyway 대상으로 전환할 때는 baseline 전략을 먼저 합의한다.
 
 ## SQL
 
@@ -52,6 +52,14 @@ VyyyyMMddHHmmss__description.sql
 ```
 
 예: `V20261012143000__add_course_spatial_index.sql`
+
+새 Migration 파일은 아래 명령으로 생성한다. `flyway.description`은 영문 소문자 snake_case만 사용한다.
+
+```bash
+bash ./mvnw antrun:run@create-flyway-migration -Dflyway.description=create_user_table
+```
+
+Windows에서는 `./mvnw.cmd antrun:run@create-flyway-migration -Dflyway.description=create_user_table`를 사용한다. 이 명령은 현재 시각 기준 파일명만 생성하며 DB 연결·검증·Migration 적용은 수행하지 않는다. 같은 초 단위의 Migration 파일이 이미 있으면 덮어쓰지 않고 실패한다.
 
 - 새 스키마 변경은 새 Migration으로 추가한다.
 - 이미 공유되거나 적용된 Migration의 내용과 버전을 수정하지 않는다.

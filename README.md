@@ -132,9 +132,8 @@ docker compose down
 
 ## DB 변경 관리
 
-Flyway 의존성과 안전 설정을 준비했지만 자동 migration은 기본 비활성화입니다.
-기존 DB를 조회하거나 변경하지 않았으며 가상의 테이블 생성 SQL도 추가하지 않았습니다.
-실제 스키마·DB/확장 버전·baseline을 확인한 후 [DB 규칙](docs/database-convention.md)에 따라 활성화합니다.
+신규 빈 DB용 초기 Migration을 관리하며, 애플리케이션 시작 시 Flyway가 `src/main/resources/db/migration/`의 미적용 SQL을 실행합니다.
+초기 Migration은 PostGIS·pgRouting 확장을 생성하므로 DB 계정에 확장 생성 권한이 필요합니다. 기존 DB를 Flyway 대상으로 전환할 때는 [DB 규칙](docs/database-convention.md)에 따라 별도의 baseline 전략을 합의합니다.
 
 ## 협업 문서와 CodeRabbit
 
