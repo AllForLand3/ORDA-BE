@@ -53,6 +53,14 @@ VyyyyMMddHHmmss__description.sql
 
 예: `V20261012143000__add_course_spatial_index.sql`
 
+새 Migration 파일은 아래 명령으로 생성한다. `flyway.description`은 영문 소문자 snake_case만 사용한다.
+
+```bash
+bash ./mvnw antrun:run@create-flyway-migration -Dflyway.description=create_user_table
+```
+
+Windows에서는 `./mvnw.cmd antrun:run@create-flyway-migration -Dflyway.description=create_user_table`를 사용한다. 이 명령은 현재 시각 기준 파일명만 생성하며 DB 연결·검증·Migration 적용은 수행하지 않는다. 같은 초 단위의 Migration 파일이 이미 있으면 덮어쓰지 않고 실패한다.
+
 - 새 스키마 변경은 새 Migration으로 추가한다.
 - 이미 공유되거나 적용된 Migration의 내용과 버전을 수정하지 않는다.
 - 동일 timestamp를 중복 사용하지 않고 description은 변경 목적이 드러나는 영문 snake_case로 작성한다.
