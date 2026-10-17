@@ -27,6 +27,12 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+orda:
+  course:
+    # 로그인 기능 개발 전 임시 코드
+    workspace-owner-user-id: ${ORDA_COURSE_WORKSPACE_OWNER_USER_ID:}
+    max-coordinates: ${ORDA_COURSE_MAX_COORDINATES:10000}
+    max-body-bytes: ${ORDA_COURSE_MAX_BODY_BYTES:2097152}
 server:
   error:
     include-message: never
