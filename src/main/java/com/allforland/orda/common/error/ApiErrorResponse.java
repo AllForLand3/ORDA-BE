@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
+/** 공통 API 오류 응답 값을 담는다. */
 @Getter
 @Accessors(fluent = true)
 @AllArgsConstructor

@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+/** 코스 데이터 조회와 변경을 위한 MyBatis 매퍼다. */
 @Mapper
 public interface CourseMapper {
     boolean activeUserExists(@Param("userId") long userId);

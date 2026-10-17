@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
+/** 코스 부분 수정 값과 필드 누락 여부를 담는다. */
 @Getter
 @Accessors(fluent = true)
 @NoArgsConstructor(access = AccessLevel.PUBLIC)

@@ -16,6 +16,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdviceAdapter;
 
+/** 코스 요청 본문의 크기를 제한한다. */
 @ControllerAdvice
 public class CourseRequestBodyAdvice extends RequestBodyAdviceAdapter {
     private final int maximumBytes;

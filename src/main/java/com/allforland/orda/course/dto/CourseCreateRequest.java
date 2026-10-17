@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
+/** 코스 등록 요청 값을 담는다. */
 @Getter
 @Accessors(fluent = true)
 @NoArgsConstructor(access = AccessLevel.PUBLIC)
