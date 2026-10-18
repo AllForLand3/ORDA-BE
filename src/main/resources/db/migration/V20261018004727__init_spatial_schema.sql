@@ -75,7 +75,8 @@ CREATE TABLE raw_trail (
     use_yn CHAR(1) NOT NULL DEFAULT 'Y' CHECK (use_yn IN ('Y', 'N')),
     exclude_rsn VARCHAR(200),
     src_attr_json JSONB,
-    CONSTRAINT uq_raw_trail_dataset_source UNIQUE (dataset_id, src_trail_id)
+    CONSTRAINT uq_raw_trail_dataset_source UNIQUE (dataset_id, src_trail_id),
+    CONSTRAINT uq_raw_trail_mountain_trail UNIQUE (mountain_id, raw_trail_id)
 );
 
 CREATE TABLE key_place (
@@ -95,15 +96,16 @@ CREATE TABLE trail_node (
     place_id BIGINT REFERENCES key_place (place_id),
     component_no INTEGER,
     edge_cnt INTEGER,
-    geom geometry(Point, 5179) NOT NULL
+    geom geometry(Point, 5179) NOT NULL,
+    CONSTRAINT uq_trail_node_mountain_node UNIQUE (mountain_id, node_id)
 );
 
 CREATE TABLE trail_edge (
     edge_id BIGSERIAL PRIMARY KEY,
     mountain_id BIGINT NOT NULL REFERENCES mountain (mountain_id),
-    source_node_id BIGINT NOT NULL REFERENCES trail_node (node_id),
-    target_node_id BIGINT NOT NULL REFERENCES trail_node (node_id),
-    raw_trail_id BIGINT NOT NULL REFERENCES raw_trail (raw_trail_id),
+    source_node_id BIGINT NOT NULL,
+    target_node_id BIGINT NOT NULL,
+    raw_trail_id BIGINT NOT NULL,
     geom geometry(LineString, 5179) NOT NULL,
     length_m NUMERIC(9, 1) NOT NULL,
     fwd_uphill_yn CHAR(1) CHECK (fwd_uphill_yn IN ('Y', 'N')),
@@ -113,7 +115,16 @@ CREATE TABLE trail_edge (
     fwd_ascent_m NUMERIC(7, 1),
     fwd_descent_m NUMERIC(7, 1),
     stair_spot_cnt INTEGER NOT NULL DEFAULT 0,
-    pass_yn CHAR(1) NOT NULL DEFAULT 'Y' CHECK (pass_yn IN ('Y', 'N'))
+    pass_yn CHAR(1) NOT NULL DEFAULT 'Y' CHECK (pass_yn IN ('Y', 'N')),
+    CONSTRAINT fk_trail_edge_source_node_mountain
+        FOREIGN KEY (mountain_id, source_node_id)
+        REFERENCES trail_node (mountain_id, node_id),
+    CONSTRAINT fk_trail_edge_target_node_mountain
+        FOREIGN KEY (mountain_id, target_node_id)
+        REFERENCES trail_node (mountain_id, node_id),
+    CONSTRAINT fk_trail_edge_raw_trail_mountain
+        FOREIGN KEY (mountain_id, raw_trail_id)
+        REFERENCES raw_trail (mountain_id, raw_trail_id)
 );
 
 CREATE TABLE routing_run (
