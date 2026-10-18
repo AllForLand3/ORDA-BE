@@ -146,7 +146,7 @@ CREATE TABLE route_candidate (
     rank_no SMALLINT NOT NULL CHECK (rank_no BETWEEN 1 AND 3),
     priority_cond_cd VARCHAR(20) NOT NULL CHECK (priority_cond_cd IN ('DIST_FIRST', 'GENTLE_SLOPE', 'LESS_STAIR')),
     edge_seq BIGINT[] NOT NULL,
-    path_hash CHAR(32) NOT NULL UNIQUE,
+    path_hash CHAR(32) NOT NULL,
     geom geometry(LineString, 5179) NOT NULL,
     length_m NUMERIC(9, 1) NOT NULL,
     est_time_min NUMERIC(6, 1),
@@ -157,7 +157,8 @@ CREATE TABLE route_candidate (
     calc_difficulty_cd VARCHAR(10) CHECK (calc_difficulty_cd IN ('EASY', 'NORMAL', 'HARD')),
     total_cost NUMERIC(12, 2) NOT NULL,
     cond_met_yn CHAR(1) NOT NULL CHECK (cond_met_yn IN ('Y', 'N')),
-    CONSTRAINT uq_route_candidate_run_rank UNIQUE (run_id, rank_no)
+    CONSTRAINT uq_route_candidate_run_rank UNIQUE (run_id, rank_no),
+    CONSTRAINT uq_route_candidate_run_path_hash UNIQUE (run_id, path_hash)
 );
 
 CREATE TABLE trail_spot (
