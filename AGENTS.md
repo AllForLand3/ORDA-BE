@@ -19,11 +19,11 @@
 
 ## API, GIS, DB
 
-- API 좌표는 EPSG:4326 GeoJSON `[longitude, latitude]`, 화면은 EPSG:3857이다. 제공된 저장·거리 연산 기준은 EPSG:5179이며 실제 스키마와 대조한다.
+- API 좌표는 EPSG:4326 GeoJSON `[longitude, latitude]`, 화면은 EPSG:3857이다. DB 저장·거리 연산은 EPSG:5179이며 Geometry 컬럼은 유형과 SRID를 고정한다.
 - 좌표계를 임의 변환하거나 결측값을 0으로 채우지 않는다. SRID, 테이블·컬럼, 인증 방식 등 미확정 계약을 추측해 확정하지 않는다.
 - SQL 값은 `#{}`로 바인딩한다. 동적 식별자는 서버 허용 목록으로 제한한다.
 - 원자적 변경의 트랜잭션은 Service가 관리한다.
-- 현재 저장소에는 migration SQL이 없다. Flyway는 비활성화 상태를 유지하고, 기존 DB와 baseline을 확인하기 전에 migration을 실행하거나 초기 스키마를 만들지 않는다.
+- 신규 빈 DB용 초기 Migration은 `src/main/resources/db/migration/`에서 관리한다. 적용된 Migration을 수정하거나 삭제하지 않으며, 기존 DB를 Flyway 대상으로 전환할 때는 별도의 baseline 전략을 합의한다.
 - 실 DB와 공유 AWS DB를 테스트에 사용하지 않는다. 적용된 migration을 수정하거나 baseline을 자동 생성하지 않는다.
 
 ## 보안과 오류

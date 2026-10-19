@@ -125,6 +125,47 @@
     <finalName>orda-api</finalName>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>create-flyway-migration</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target name="create-flyway-migration">
+                <fail message="-Dflyway.description must use lowercase snake_case.">
+                  <condition>
+                    <not>
+                      <matches string="${flyway.description}" pattern="^[a-z0-9]+(_[a-z0-9]+)*$" />
+                    </not>
+                  </condition>
+                </fail>
+                <tstamp>
+                  <format property="flyway.timestamp" pattern="yyyyMMddHHmmss" />
+                </tstamp>
+                <mkdir dir="${project.basedir}/src/main/resources/db/migration" />
+                <resourcecount property="flyway.timestamp.file.count">
+                  <fileset dir="${project.basedir}/src/main/resources/db/migration" includes="V${flyway.timestamp}__*.sql" />
+                </resourcecount>
+                <fail message="A migration file already uses timestamp ${flyway.timestamp}.">
+                  <condition>
+                    <not>
+                      <equals arg1="${flyway.timestamp.file.count}" arg2="0" />
+                    </not>
+                  </condition>
+                </fail>
+                <property name="flyway.migration.path" location="${project.basedir}/src/main/resources/db/migration/V${flyway.timestamp}__${flyway.description}.sql" />
+                <touch file="${flyway.migration.path}" />
+                <echo message="Created ${flyway.migration.path}" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
         <version>2.43.0</version>

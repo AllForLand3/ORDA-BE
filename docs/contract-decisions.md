@@ -2,9 +2,8 @@
 
 ## 근거와 상태
 
-2026-10-15 초기 세팅 기준이다. BE `chore/#1-project-setup`과 FE `chore/#1-setup`의 코드·문서,
-사용자가 제공한 CodeRabbit 검토 지침과 후속 브랜치·커밋·Issue·PR·폴더 규칙을 반영했다. API 초안과 테이블 정의서 원문, 실제 DB 스키마는 제공되지 않았다.
-아래 초안 요약을 승인된 DB 정의로 취급하거나 그 내용을 근거로 테이블을 생성하지 않는다.
+2026-10-15 초기 세팅 기준이며, 2026-10-18 사용자가 제공·승인한 ORDA 테이블 정의서와 신규 빈 DB 운영 결정을 반영했다. BE `chore/#1-project-setup`과 FE `chore/#1-setup`의 코드·문서,
+사용자가 제공한 CodeRabbit 검토 지침과 후속 브랜치·커밋·Issue·PR·폴더 규칙을 반영했다. 이후 스키마 변경은 적용된 Migration을 수정하지 않고 새 Migration으로 추가한다.
 
 ## 적용한 설정
 
@@ -19,7 +18,7 @@
 | 오류 응답 | `status/code/message/details/traceId` | FE 필드 보존을 위한 임시 호환 구현. 최종 계약 합의 아님 |
 | details | `{field, message}` 배열, 없으면 `[]` | 초기 구현. FE 타입 확장은 별도 반영 필요 |
 | API 공간 데이터 | EPSG:4326 GeoJSON, 경도·위도, m/% | 기존 FE 규칙과 제공된 지침 |
-| DB migration | 의존성과 규칙만, 자동 적용 비활성화 | 기존 스키마/baseline 미확인 |
+| DB migration | 신규 빈 DB용 초기 Migration, 자동 적용 활성화 | 사용자 승인 테이블 정의서, 기존 DB 전환은 baseline 별도 합의 |
 | 헬스체크·테스트 | 헬스체크 API와 자동 테스트 코드·설정·전용 의존성 제거 | 사용자 요청. Maven package는 포맷·린트·컴파일·WAR 패키징을 수행하며 CI workflow는 저장소에 없음 |
 
 ## 기능 개발 전에 결정할 사항
@@ -32,12 +31,12 @@
 | edge_seq | 단일 bigint 메모 vs bigint[] | 순서·방향 저장 방식 |
 | 코드 값 | IMPORT/DRAW/CANDIDATE_COPY, FROM_CANDIDATE, FROM_ROUTE_CANDIDATE; NORMAL/MODERATE·EXPERT; DONE/COMPLETED; 시설 유형 | DB와 DTO의 명시적 변환 여부 |
 | 경로 입력 | FE의 노드 ID 뼈대·지도 좌표 목표 vs 초안 mountainId/startPlaceId/endPlaceId | 지점·좌표 선택과 스냅 책임, place/node 연결 |
-| DB SRID | 제공 지침은 EPSG:5179 | 실제 geometry SRID·단위·타입과 데이터 |
+| DB SRID | EPSG:5179 | 사용자 승인 및 초기 Migration Geometry 컬럼에 반영 |
 | 인증 | 로그인, 비밀번호 저장, Refresh Token, PUBLIC/USER/ADMIN | 승인된 인증·인가 정책 |
 | 저장 권한 | 비로그인 후보의 로그인 후 저장, 코스 공개 범위 | 사용자·자원 소유권 정책 |
 | GPX 입력 | 기존 MVP 제외 vs API D-01 포함 | 이번 MVP 범위 |
 | 장기 보존 | 코스·후보·네트워크·분석 계보와 삭제 | 보존 기간과 논리 삭제 정책 |
 | 목록·ID | 페이지 필드·기본값, bigint 문자열 반환 | FE·BE DTO 합의 |
-| DB 구성 원본 | 구조 예시의 compose.yaml·V20261012000000__init_spatial_schema.sql은 현재 저장소에 없음 | 기존 DB 전용 Compose·승인된 초기 스키마 원문 확인 후 반영 |
+| 기존 DB 전환 | 신규 빈 DB용 초기 스키마와 별개로 baseline 전략 필요 | 기존 DB의 스키마·적용 이력·배포 권한 확인 |
 
 결정 시 날짜, 승인자/PR, 합의 내용, 영향을 받는 FE·BE·migration을 기록하고 관련 문서를 함께 갱신한다.

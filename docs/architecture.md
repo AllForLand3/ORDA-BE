@@ -10,7 +10,7 @@ ORDA GIS 등산 코스 서비스의 Backend는 REST API, 비즈니스 규칙, �
 - MyBatis, Maven WAR
 - 외부 Tomcat 8.5.95 배포 (필수)
 - PostgreSQL JDBC 드라이버가 설정되어 있다. PostGIS·pgRouting과 실제 DB 버전/확장 상태는 운영 스키마와 대조한다.
-- Flyway 의존성이 있지만 migration SQL이 없고 실행은 비활성화되어 있다.
+- Flyway는 신규 빈 DB용 초기 Migration을 `src/main/resources/db/migration/`에서 실행한다. 기존 DB 전환은 baseline 전략 합의 후 별도로 진행한다.
 - 현재 자동 테스트 코드와 테스트 전용 의존성은 없다.
 
 실제 버전은 `pom.xml`을 기준으로 한다. 기술 스택과 외부 Tomcat 요구사항을 임의로 바꾸지 않는다.
