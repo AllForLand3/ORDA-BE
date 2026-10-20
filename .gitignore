@@ -38,3 +38,12 @@ data/*
 application-local.yml
 !src/main/resources/application-local.yml
 .orda/
+
+# Eclipse
+.classpath
+.project
+.factorypath
+.settings/
+
+# Eclipse build output
+bin/

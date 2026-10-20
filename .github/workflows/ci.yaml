@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches:
+      - dev
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgis:
+        image: pgrouting/pgrouting:14-3.5-3.8.0
+        env:
+          POSTGRES_DB: orda_ci
+          POSTGRES_USER: orda_ci
+          POSTGRES_PASSWORD: orda_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orda_ci -d orda_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/orda_ci
+      SPRING_DATASOURCE_USERNAME: orda_ci
+      SPRING_DATASOURCE_PASSWORD: orda_ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+
+      - name: Validate Flyway migration names and versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          migration_files=(src/main/resources/db/migration/V*.sql)
+          if (( ${#migration_files[@]} == 0 )); then
+            echo "::error::No Flyway migration files were found."
+            exit 1
+          fi
+
+          declare -A seen_versions=()
+          for migration in "${migration_files[@]}"; do
+            filename="$(basename "$migration")"
+            if [[ ! "$filename" =~ ^V([0-9]{14})__([a-z0-9]+(_[a-z0-9]+)*)\.sql$ ]]; then
+              echo "::error file=$migration::Flyway migration name must match VyyyyMMddHHmmss__lowercase_snake_case.sql"
+              exit 1
+            fi
+
+            version="${BASH_REMATCH[1]}"
+            if [[ -n "${seen_versions[$version]:-}" ]]; then
+              echo "::error file=$migration::Duplicate Flyway version $version: ${seen_versions[$version]} and $migration"
+              exit 1
+            fi
+            seen_versions[$version]="$migration"
+          done
+
+      - name: Check Flyway migration immutability
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          migration_dir="src/main/resources/db/migration"
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            compare_ref="$BASE_SHA"
+          elif [[ "$EVENT_NAME" == "push" ]]; then
+            compare_ref="$BEFORE_SHA"
+          else
+            echo "Skipping migration immutability check."
+            exit 0
+          fi
+
+          if [[ -z "$compare_ref" || "$compare_ref" =~ ^0+$ ]]; then
+            echo "No previous commit available; skipping comparison."
+            exit 0
+          fi
+
+          violations="$(
+            git diff --name-status --no-renames \
+              "$compare_ref" HEAD -- \
+              ':(glob)src/main/resources/db/migration/**/V*.sql' \
+              | awk '$1 == "M" || $1 == "D" || $1 == "T" { print }'
+          )"
+
+          if [[ -n "$violations" ]]; then
+            echo "::error::Existing Flyway migration files must not be modified or deleted."
+            printf '%s\n' "$violations"
+            exit 1
+          fi
+
+          echo "Flyway migration immutability check passed."	  
+
+      - name: Check Spotless
+        run: ./mvnw --batch-mode --no-transfer-progress spotless:check
+
+      - name: Check Checkstyle
+        run: ./mvnw --batch-mode --no-transfer-progress checkstyle:check
+
+      - name: Run tests
+        run: ./mvnw --batch-mode --no-transfer-progress test
+
+      - name: Build WAR
+        run: ./mvnw --batch-mode --no-transfer-progress package -DskipTests
+
+      - name: Validate Docker Compose configuration
+        run: docker compose --env-file .env.example config --quiet
+
+      - name: Build Docker image
+        run: docker build --tag orda-api:ci .
