@@ -69,12 +69,37 @@ jobs:
           done
           exit "$missing"
 
+      - name: Verify latest main commit
+        id: latest-main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          latest_sha="$(
+            gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" \
+              --jq '.object.sha'
+          )"
+
+          if [[ "$DEPLOY_SHA" != "$latest_sha" ]]; then
+            echo "Skipping outdated deployment."
+            echo "CI commit: $DEPLOY_SHA"
+            echo "Latest main: $latest_sha"
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Verified latest main commit: $DEPLOY_SHA"
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build deployment WAR
+        if: steps.latest-main.outputs.should_deploy == 'true'
         run: |
           chmod +x mvnw
           ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
 
       - name: Create deployment bundle
+        if: steps.latest-main.outputs.should_deploy == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -86,6 +111,7 @@ jobs:
           tar -czf deploy.tar.gz -C deploy .
 
       - name: Configure SSH
+        if: steps.latest-main.outputs.should_deploy == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -95,6 +121,7 @@ jobs:
           chmod 0600 ~/.ssh/deploy_key ~/.ssh/known_hosts
 
       - name: Upload deployment bundle
+        if: steps.latest-main.outputs.should_deploy == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -106,7 +133,34 @@ jobs:
             deploy.tar.gz \
             "$EC2_USER@$EC2_HOST:/tmp/orda-be-$DEPLOY_SHA.tar.gz"
 
+      - name: Recheck latest main commit before deployment
+        id: deploy-check
+        if: steps.latest-main.outputs.should_deploy == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          latest_sha="$(
+            gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" \
+              --jq '.object.sha'
+          )"
+
+          if [[ "$DEPLOY_SHA" != "$latest_sha" ]]; then
+            echo "Skipping outdated deployment."
+            echo "CI commit: $DEPLOY_SHA"
+            echo "Latest main: $latest_sha"
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Latest main commit verified."
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy on EC2
+        if: >-
+          steps.latest-main.outputs.should_deploy == 'true' &&
+          steps.deploy-check.outputs.should_deploy == 'true'
         shell: bash
         run: |
           set -euo pipefail
