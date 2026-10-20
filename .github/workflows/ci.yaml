@@ -116,7 +116,7 @@ jobs:
             git diff --name-status --no-renames \
               "$compare_ref" HEAD -- \
               ':(glob)src/main/resources/db/migration/**/V*.sql' \
-              | awk '$1 == "M" || $1 == "D" { print }'
+              | awk '$1 == "M" || $1 == "D" || $1 == "T" { print }'
           )"
 
           if [[ -n "$violations" ]]; then
