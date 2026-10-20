@@ -133,11 +133,29 @@ jobs:
           docker compose --env-file .env build backend
           docker compose --env-file .env up --detach --no-build --remove-orphans backend
 
-          sleep 10
-          if [[ "$(docker inspect --format='{{.State.Running}}' orda-api)" != "true" ]]; then
+          echo "Waiting for application startup..."
+
+          host_port="$(docker compose --env-file .env port backend 8080 | awk -F: '{print $NF}')"
+          health_url="http://127.0.0.1:${host_port}/orda-api/actuator/health"
+
+          healthy=false
+
+          for i in {1..30}; do
+            if curl --silent --fail --max-time 3 "$health_url" > /dev/null; then
+              healthy=true
+              break
+            fi
+
+            sleep 5
+          done
+
+          if [[ "$healthy" != "true" ]]; then
+            echo "Application health check failed."
             docker compose --env-file .env logs --tail=100 backend
             exit 1
           fi
+
+          echo "Spring Boot health check passed."
 
           docker compose --env-file .env ps
           REMOTE
