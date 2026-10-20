@@ -1,0 +1,49 @@
+# secrets
+.env
+.env.*
+!.env.example
+!.env.aws.example
+*.pem
+*.key
+*.p12
+*.pfx
+# build and caches
+target/
+.build-cache/
+*.class
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.venv/
+*.pyc
+*.log
+# GIS binary sources and generated data
+data/*
+!data/.gitkeep
+*.tif
+*.tiff
+*.gpkg
+*.las
+*.laz
+*.shp
+*.shx
+*.dbf
+*.prj
+*.sql.gz
+application-local.yml
+!src/main/resources/application-local.yml
+.orda/
+
+# Eclipse
+.classpath
+.project
+.factorypath
+.settings/
+
+# Eclipse build output
+bin/
