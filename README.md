@@ -130,6 +130,28 @@ ssh -i "C:\keys\orda.pem" -N -L 18080:127.0.0.1:8080 "ubuntu@203.0.113.10"
 docker compose down
 ```
 
+## GitHub Actions로 EC2 자동 배포
+
+`main` 브랜치의 CI가 성공하면 `.github/workflows/cd.yaml`이 검증된 커밋의 WAR를 빌드하고 단일 EC2 서버의 `$HOME/orda-be`에 배포합니다. `dev`와 다른 브랜치는 배포하지 않습니다. EC2에는 Docker Engine과 Docker Compose 플러그인이 설치되어 있어야 하며, DB 컨테이너가 사용하는 `orda-db_default` 네트워크가 먼저 존재해야 합니다.
+
+Repository Actions secrets에 다음 값을 등록합니다.
+
+- `EC2_HOST`: EC2 접속 호스트 또는 공인 IP
+- `EC2_USER`: SSH 로그인 계정
+- `EC2_SSH_PORT`: SSH 포트. 등록하지 않으면 `22`
+- `EC2_SSH_PRIVATE_KEY`: 배포 전용 SSH 개인키 전체 내용
+- `EC2_SSH_HOST_KEY`: 서버 신원을 확인한 `known_hosts` 한 줄
+- `EC2_ENV_FILE`: 서버에 배치할 아래 형식의 `.env` 전체 내용
+
+```dotenv
+APP_HOST_PORT=8080
+SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:55432/gwanak_dev
+SPRING_DATASOURCE_USERNAME=<DB 사용자명>
+SPRING_DATASOURCE_PASSWORD=<DB 비밀번호>
+```
+
+CD는 DB 컨테이너를 생성하거나 외부에 DB 포트를 공개하지 않습니다. 새 애플리케이션 이미지를 빌드한 후 기존 `orda-api` 컨테이너만 갱신하며, 애플리케이션 시작 과정에서 Flyway가 미적용 migration을 실행합니다.
+
 ## DB 변경 관리
 
 신규 빈 DB용 초기 Migration을 관리하며, 애플리케이션 시작 시 Flyway가 `src/main/resources/db/migration/`의 미적용 SQL을 실행합니다.

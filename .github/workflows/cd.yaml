@@ -1,0 +1,139 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy main to EC2
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_SSH_PORT: ${{ secrets.EC2_SSH_PORT || '22' }}
+      EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+      EC2_SSH_HOST_KEY: ${{ secrets.EC2_SSH_HOST_KEY }}
+      EC2_ENV_FILE: ${{ secrets.EC2_ENV_FILE }}
+
+    steps:
+      - name: Checkout verified main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Validate deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for variable in \
+            EC2_HOST \
+            EC2_USER \
+            EC2_SSH_PRIVATE_KEY \
+            EC2_SSH_HOST_KEY \
+            EC2_ENV_FILE
+          do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "::error::$variable GitHub Secret is required."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Build deployment WAR
+        run: |
+          chmod +x mvnw
+          ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
+
+      - name: Create deployment bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deploy/target
+          install -m 0644 Dockerfile docker-compose.yaml deploy/
+          install -m 0644 target/orda-api.war deploy/target/orda-api.war
+          printf '%s\n' "$EC2_ENV_FILE" > deploy/.env
+          chmod 0600 deploy/.env
+          tar -czf deploy.tar.gz -C deploy .
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          printf '%s\n' "$EC2_SSH_HOST_KEY" > ~/.ssh/known_hosts
+          chmod 0600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      - name: Upload deployment bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp \
+            -i ~/.ssh/deploy_key \
+            -P "$EC2_SSH_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            deploy.tar.gz \
+            "$EC2_USER@$EC2_HOST:/tmp/orda-be-$DEPLOY_SHA.tar.gz"
+
+      - name: Deploy on EC2
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -p "$EC2_SSH_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            "bash -s -- '$DEPLOY_SHA'" <<'REMOTE'
+          set -euo pipefail
+
+          revision="$1"
+          deploy_dir="$HOME/orda-be"
+          archive="/tmp/orda-be-$revision.tar.gz"
+
+          mkdir -p "$deploy_dir"
+          tar -xzf "$archive" -C "$deploy_dir"
+          rm -f "$archive"
+          cd "$deploy_dir"
+
+          docker network inspect orda-db_default >/dev/null
+          docker compose --env-file .env config --quiet
+          docker compose --env-file .env build backend
+          docker compose --env-file .env up --detach --no-build --remove-orphans backend
+
+          sleep 10
+          if [[ "$(docker inspect --format='{{.State.Running}}' orda-api)" != "true" ]]; then
+            docker compose --env-file .env logs --tail=100 backend
+            exit 1
+          fi
+
+          docker compose --env-file .env ps
+          REMOTE
