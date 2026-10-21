@@ -136,6 +136,13 @@
 	    <artifactId>spring-boot-starter-tomcat</artifactId>
 	    <scope>provided</scope>
 	</dependency>
+	<!-- 개발 환경 자동 재시작 -->
+	<dependency>
+	    <groupId>org.springframework.boot</groupId>
+	    <artifactId>spring-boot-devtools</artifactId>
+	    <scope>runtime</scope>
+	    <optional>true</optional>
+	</dependency>
   </dependencies>
   <build>
     <finalName>orda-api</finalName>
