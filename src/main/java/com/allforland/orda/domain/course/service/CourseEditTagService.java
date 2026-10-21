@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -18,14 +19,14 @@ public class CourseEditTagService {
     private final ObjectMapper canonicalMapper =
             JsonMapper.builder().enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY).build();
 
-    /** 코스 응답의 ETag를 계산한다. */
+    /** 코스 응답과 내부 행 버전으로 ETag를 계산한다. */
     public String tag(CourseDetailResponse course) {
         try {
             byte[] representation = canonicalMapper.writeValueAsBytes(course);
-            return "\""
-                    + HexFormat.of()
-                            .formatHex(MessageDigest.getInstance("SHA-256").digest(representation))
-                    + "\"";
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(course.rowVersion().getBytes(StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            return "\"" + HexFormat.of().formatHex(digest.digest(representation)) + "\"";
         } catch (JsonProcessingException | NoSuchAlgorithmException exception) {
             throw new IllegalStateException("Cannot calculate course ETag");
         }

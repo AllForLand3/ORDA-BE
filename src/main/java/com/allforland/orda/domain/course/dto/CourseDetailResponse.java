@@ -2,6 +2,7 @@ package com.allforland.orda.domain.course.dto;
 
 import com.allforland.orda.common.geo.LineStringGeometry;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.math.BigDecimal;
@@ -27,9 +28,7 @@ import lombok.experimental.Accessors;
     "createType",
     "revNo",
     "geometry",
-    "lengthM",
-    "createdAt",
-    "updatedAt"
+    "lengthM"
 })
 public class CourseDetailResponse {
     private final String courseId;
@@ -40,6 +39,5 @@ public class CourseDetailResponse {
     private final int revNo;
     private final LineStringGeometry geometry;
     private final BigDecimal lengthM;
-    private final String createdAt;
-    private final String updatedAt;
+    @JsonIgnore private final String rowVersion;
 }

@@ -25,8 +25,7 @@ public interface CourseMapper {
             @Param("memo") String memo,
             @Param("createType") String createType,
             @Param("geometryHex") String geometryHex,
-            @Param("lengthM") BigDecimal lengthM,
-            @Param("actorId") String actorId);
+            @Param("lengthM") BigDecimal lengthM);
 
     int updateCourse(
             @Param("courseId") long courseId,
@@ -35,13 +34,9 @@ public interface CourseMapper {
             @Param("memo") String memo,
             @Param("geometryChanged") boolean geometryChanged,
             @Param("geometryHex") String geometryHex,
-            @Param("lengthM") BigDecimal lengthM,
-            @Param("actorId") String actorId);
+            @Param("lengthM") BigDecimal lengthM);
 
-    int deleteCourse(
-            @Param("courseId") long courseId,
-            @Param("ownerUserId") long ownerUserId,
-            @Param("actorId") String actorId);
+    int deleteCourse(@Param("courseId") long courseId, @Param("ownerUserId") long ownerUserId);
 
     CourseGeometryRow prepareGeometry(
             @Param("geometryJson") String geometryJson,

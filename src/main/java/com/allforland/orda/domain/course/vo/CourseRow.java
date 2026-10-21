@@ -1,7 +1,6 @@
 package com.allforland.orda.domain.course.vo;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -19,7 +18,6 @@ public class CourseRow {
     private final Integer revNo;
     private final String geometryJson;
     private final BigDecimal lengthM;
-    private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private final String rowVersion;
     private final Boolean geometryValid;
 }

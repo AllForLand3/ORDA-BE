@@ -13,7 +13,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.sql.SQLException;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,8 +70,7 @@ public class CourseService {
                         memo,
                         request.createType(),
                         geometry.geometryHex(),
-                        geometry.lengthM(),
-                        Long.toString(owner));
+                        geometry.lengthM());
         if (courseId == null || courseId <= 0) {
             throw stateUnavailable();
         }
@@ -137,8 +135,7 @@ public class CourseService {
                         memo,
                         geometryChanged,
                         geometryChanged ? geometry.geometryHex() : null,
-                        geometryChanged ? geometry.lengthM() : null,
-                        Long.toString(owner));
+                        geometryChanged ? geometry.lengthM() : null);
         requireSingleChange(affected);
         return detail(requireCourse(id, owner, false));
     }
@@ -151,7 +148,7 @@ public class CourseService {
         long owner = requireOwner();
         CourseDetailResponse current = detail(requireCourse(id, owner, true));
         editTags.verify(expected, current);
-        requireSingleChange(mapper.deleteCourse(id, owner, Long.toString(owner)));
+        requireSingleChange(mapper.deleteCourse(id, owner));
     }
 
     /** Mapper 변경 건수가 한 건인지 확인한다. */
@@ -365,8 +362,8 @@ public class CourseService {
                 || course.lengthM() == null
                 || course.lengthM().signum() <= 0
                 || course.lengthM().compareTo(MAXIMUM_LENGTH) > 0
-                || course.createdAt() == null
-                || course.updatedAt() == null) {
+                || course.rowVersion() == null
+                || course.rowVersion().isBlank()) {
             throw stateUnavailable();
         }
         LineStringGeometry geometry;
@@ -385,8 +382,7 @@ public class CourseService {
                 course.revNo(),
                 geometry,
                 course.lengthM(),
-                course.createdAt().toInstant(ZoneOffset.UTC).toString(),
-                course.updatedAt().toInstant(ZoneOffset.UTC).toString());
+                course.rowVersion());
     }
 
     /** 코스 저장 상태 오류를 생성한다. */

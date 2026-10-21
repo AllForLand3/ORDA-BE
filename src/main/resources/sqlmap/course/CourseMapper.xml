@@ -11,8 +11,7 @@
       <arg column="rev_no" javaType="java.lang.Integer"/>
       <arg column="geometry_json" javaType="java.lang.String"/>
       <arg column="length_m" javaType="java.math.BigDecimal"/>
-      <arg column="frst_regist_dt" javaType="java.time.LocalDateTime"/>
-      <arg column="last_update_dt" javaType="java.time.LocalDateTime"/>
+      <arg column="row_version" javaType="java.lang.String"/>
       <arg column="geometry_valid" javaType="java.lang.Boolean"/>
     </constructor>
   </resultMap>
@@ -30,7 +29,7 @@
            CASE WHEN ST_SRID(c.geom) = 5179 AND GeometryType(c.geom) = 'LINESTRING'
                      AND ST_NDims(c.geom) = 2 AND NOT ST_IsEmpty(c.geom) AND ST_IsValid(c.geom)
                 THEN ST_AsGeoJSON(ST_Transform(c.geom, 4326), 15, 0) END AS geometry_json,
-           c.length_m, c.frst_regist_dt, c.last_update_dt,
+           c.length_m, c.xmin::text AS row_version,
            COALESCE(ST_SRID(c.geom) = 5179 AND GeometryType(c.geom) = 'LINESTRING'
                     AND ST_NDims(c.geom) = 2 AND NOT ST_IsEmpty(c.geom)
                     AND ST_IsValid(c.geom), false) AS geometry_valid
@@ -44,34 +43,28 @@
   <select id="insertCourse" resultType="java.lang.Long" affectData="true" flushCache="true" useCache="false">
     INSERT INTO course (
       mountain_id, owner_user_id, course_nm, memo, create_type_cd, del_yn, rev_no, geom,
-      length_m, est_time_min, src_difficulty_mix_json, calc_difficulty_cd,
-      frst_rgster_id, frst_regist_dt, last_updusr_id, last_update_dt
+      length_m, est_time_min, src_difficulty_mix_json, calc_difficulty_cd
     ) VALUES (
       #{mountainId}, #{ownerUserId}, #{courseName}, #{memo,jdbcType=VARCHAR}, #{createType}, 'N', 1,
-      ST_GeomFromEWKB(decode(#{geometryHex}, 'hex')), #{lengthM}, NULL, NULL, NULL,
-      #{actorId}, timezone('UTC', clock_timestamp()), #{actorId}, timezone('UTC', clock_timestamp())
+      ST_GeomFromEWKB(decode(#{geometryHex}, 'hex')), #{lengthM}, NULL, NULL, NULL
     ) RETURNING course_id
   </select>
 
-  <sql id="advanceAudit">
-    last_updusr_id = #{actorId},
-    last_update_dt = GREATEST(timezone('UTC', clock_timestamp()),
-                             last_update_dt + interval '1 microsecond')
-  </sql>
-
   <update id="updateCourse">
-    UPDATE course SET course_nm = #{courseName}, memo = #{memo,jdbcType=VARCHAR},
-    <if test="geometryChanged">
-      geom = ST_GeomFromEWKB(decode(#{geometryHex}, 'hex')), length_m = #{lengthM},
-      rev_no = rev_no + 1,
-      est_time_min = NULL, src_difficulty_mix_json = NULL, calc_difficulty_cd = NULL,
-    </if>
-    <include refid="advanceAudit"/>
+    UPDATE course
+    <set>
+      course_nm = #{courseName}, memo = #{memo,jdbcType=VARCHAR},
+      <if test="geometryChanged">
+        geom = ST_GeomFromEWKB(decode(#{geometryHex}, 'hex')), length_m = #{lengthM},
+        rev_no = rev_no + 1,
+        est_time_min = NULL, src_difficulty_mix_json = NULL, calc_difficulty_cd = NULL,
+      </if>
+    </set>
     WHERE course_id = #{courseId} AND owner_user_id = #{ownerUserId} AND del_yn = 'N'
   </update>
 
   <update id="deleteCourse">
-    UPDATE course SET del_yn = 'Y', <include refid="advanceAudit"/>
+    UPDATE course SET del_yn = 'Y'
     WHERE course_id = #{courseId} AND owner_user_id = #{ownerUserId} AND del_yn = 'N'
   </update>
 
