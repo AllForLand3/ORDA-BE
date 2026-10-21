@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.allforland.orda.domain.mountain.mapper.MountainMapper">
+	<resultMap id="mountainListItemMap"
+               type="com.allforland.orda.domain.mountain.dto.MountainListItem">
+        <result property="mountainId" column="mountain_id"/>
+        <result property="mountainName" column="mountain_nm"/>
+    </resultMap>
+
+    <resultMap id="mountainDetailMap"
+               type="com.allforland.orda.domain.mountain.dto.MountainDetailResponse">
+        <result property="mountainId" column="mountain_id"/>
+        <result property="mountainName" column="mountain_nm"/>
+        <result property="sourceMountainCode" column="src_mntn_cd"/>
+        <result property="sourceOldMountainCode" column="src_old_mntn_cd"/>
+        <result property="serviceAvailable" column="service_available"/>
+    </resultMap>
+
+    <sql id="mountainSearchCondition">
+        WHERE m.use_yn = 'Y'
+          AND EXISTS (
+              SELECT 1
+              FROM service_area sa
+              WHERE sa.mountain_id = m.mountain_id
+                AND sa.use_yn = 'Y'
+          )
+        <if test="keyword != null and keyword.trim() != ''">
+            AND m.mountain_nm ILIKE CONCAT('%', #{keyword}, '%')
+        </if>
+    </sql>
+
+    <select id="findAll" resultMap="mountainListItemMap">
+        SELECT
+            m.mountain_id,
+            m.mountain_nm
+        FROM mountain m
+        <include refid="mountainSearchCondition"/>
+        ORDER BY m.mountain_id
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM mountain m
+        <include refid="mountainSearchCondition"/>
+    </select>
+
+    <select id="findById" resultMap="mountainDetailMap">
+        SELECT
+            m.mountain_id,
+            m.mountain_nm,
+            m.src_mntn_cd,
+            m.src_old_mntn_cd,
+            TRUE AS service_available
+        FROM mountain m
+        WHERE m.mountain_id = #{mountainId}
+          AND m.use_yn = 'Y'
+          AND EXISTS (
+              SELECT 1
+              FROM service_area sa
+              WHERE sa.mountain_id = m.mountain_id
+                AND sa.use_yn = 'Y'
+          )
+    </select>
+</mapper>
