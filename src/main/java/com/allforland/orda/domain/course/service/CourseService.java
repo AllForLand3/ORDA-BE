@@ -3,6 +3,7 @@ package com.allforland.orda.domain.course.service;
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.common.geo.LineStringGeometry;
+import com.allforland.orda.domain.auth.service.AuthService;
 import com.allforland.orda.domain.course.dto.CourseCreateRequest;
 import com.allforland.orda.domain.course.dto.CourseDetailResponse;
 import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
@@ -15,7 +16,6 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,23 +25,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class CourseService {
     private static final BigDecimal MAXIMUM_LENGTH = new BigDecimal("99999999.9");
     private final CourseMapper mapper;
-    private final String configuredOwner;
-    private final int maximumCoordinates;
+    private final AuthService authService;
     private final ObjectMapper objectMapper;
     private final CourseEditTagService editTags;
 
     public CourseService(
             CourseMapper mapper,
-            @Value("${orda.course.workspace-owner-user-id:}") String configuredOwner,
-            @Value("${orda.course.max-coordinates:10000}") int maximumCoordinates,
+            AuthService authService,
             ObjectMapper objectMapper,
             CourseEditTagService editTags) {
-        if (maximumCoordinates < 2) {
-            throw new IllegalArgumentException("orda.course.max-coordinates must be at least 2");
-        }
         this.mapper = mapper;
-        this.configuredOwner = configuredOwner;
-        this.maximumCoordinates = maximumCoordinates;
+        this.authService = authService;
         this.objectMapper = objectMapper;
         this.editTags = editTags;
     }
@@ -59,7 +53,7 @@ public class CourseService {
             throw invalidRequest();
         }
         String geometryJson = validateAndSerializeGeometry(request.geometry());
-        long owner = requireOwner();
+        long owner = authService.requireCurrentUser().userId();
         requireMountain(mountainId);
         CourseGeometryRow geometry = prepareGeometry(geometryJson, mountainId, null);
         Long courseId =
@@ -77,11 +71,11 @@ public class CourseService {
         return detail(requireCourse(courseId, owner, false));
     }
 
-    /** 작업공간에서 편집 가능한 코스 상세 정보를 조회한다. */
+    /** 현재 사용자가 소유한 코스 상세 정보를 조회한다. */
     @Transactional(readOnly = true)
     public CourseDetailResponse get(String courseId) {
         long id = positiveId(courseId);
-        long owner = requireOwner();
+        long owner = authService.requireCurrentUser().userId();
         return detail(requireCourse(id, owner, false));
     }
 
@@ -102,7 +96,7 @@ public class CourseService {
         String geometryJson =
                 request.geometryPresent() ? validateAndSerializeGeometry(request.geometry()) : null;
 
-        long owner = requireOwner();
+        long owner = authService.requireCurrentUser().userId();
         CourseRow row = requireCourse(id, owner, true);
         CourseDetailResponse current = detail(row);
         editTags.verify(expected, current);
@@ -145,7 +139,7 @@ public class CourseService {
     public void delete(String courseId, String ifMatch) {
         long id = positiveId(courseId);
         String expected = editTags.requireIfMatch(ifMatch);
-        long owner = requireOwner();
+        long owner = authService.requireCurrentUser().userId();
         CourseDetailResponse current = detail(requireCourse(id, owner, true));
         editTags.verify(expected, current);
         requireSingleChange(mapper.deleteCourse(id, owner));
@@ -156,20 +150,6 @@ public class CourseService {
         if (affected != 1) {
             throw stateUnavailable();
         }
-    }
-
-    /** 설정된 활성 시연 계정을 코스 작업공간 소유자로 확인한다. */
-    private long requireOwner() {
-        long owner;
-        try {
-            owner = positiveId(configuredOwner);
-        } catch (BusinessException exception) {
-            throw new BusinessException(ErrorCode.COURSE_WORKSPACE_UNAVAILABLE);
-        }
-        if (!mapper.activeUserExists(owner)) {
-            throw new BusinessException(ErrorCode.COURSE_WORKSPACE_UNAVAILABLE);
-        }
-        return owner;
     }
 
     /** 양의 long 범위의 10진 식별자를 검증한다. */
@@ -234,7 +214,7 @@ public class CourseService {
 
     /** 코스 형상을 검증한 뒤 JSON 문자열로 직렬화한다. */
     private String validateAndSerializeGeometry(LineStringGeometry geometry) {
-        validateGeometry(geometry, maximumCoordinates);
+        validateGeometry(geometry);
         try {
             return objectMapper.writeValueAsString(geometry);
         } catch (JsonProcessingException exception) {
@@ -242,13 +222,12 @@ public class CourseService {
         }
     }
 
-    /** LineString 좌표의 형식, 범위, 개수를 검증한다. */
-    private void validateGeometry(LineStringGeometry geometry, int coordinateLimit) {
+    /** LineString 좌표의 형식, 범위와 최소 점 수를 검증한다. */
+    private void validateGeometry(LineStringGeometry geometry) {
         if (geometry == null
                 || !"LineString".equals(geometry.type())
                 || geometry.coordinates() == null
-                || geometry.coordinates().size() < 2
-                || geometry.coordinates().size() > coordinateLimit) {
+                || geometry.coordinates().size() < 2) {
             throw invalidGeometry();
         }
         List<Double> first = geometry.coordinates().get(0);
@@ -291,7 +270,7 @@ public class CourseService {
         }
     }
 
-    /** 작업공간 소유 범위에서 코스를 조회하고 필요하면 행을 잠근다. */
+    /** 현재 사용자 소유 범위에서 코스를 조회하고 필요하면 행을 잠근다. */
     private CourseRow requireCourse(long courseId, long owner, boolean lock) {
         CourseRow course = mapper.findCourse(courseId, owner, lock);
         if (course == null) {
@@ -369,7 +348,7 @@ public class CourseService {
         LineStringGeometry geometry;
         try {
             geometry = objectMapper.readValue(course.geometryJson(), LineStringGeometry.class);
-            validateGeometry(geometry, Integer.MAX_VALUE);
+            validateGeometry(geometry);
         } catch (JsonProcessingException | BusinessException exception) {
             throw stateUnavailable();
         }
