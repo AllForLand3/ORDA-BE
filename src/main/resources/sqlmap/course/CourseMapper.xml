@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.allforland.orda.domain.course.mapper.CourseMapper">
+  <resultMap id="courseResult" type="com.allforland.orda.domain.course.vo.CourseRow">
+    <constructor>
+      <idArg column="course_id" javaType="java.lang.Long"/>
+      <arg column="mountain_id" javaType="java.lang.Long"/>
+      <arg column="course_nm" javaType="java.lang.String"/>
+      <arg column="memo" javaType="java.lang.String"/>
+      <arg column="create_type_cd" javaType="java.lang.String"/>
+      <arg column="rev_no" javaType="java.lang.Integer"/>
+      <arg column="geometry_json" javaType="java.lang.String"/>
+      <arg column="length_m" javaType="java.math.BigDecimal"/>
+      <arg column="row_version" javaType="java.lang.String"/>
+      <arg column="geometry_valid" javaType="java.lang.Boolean"/>
+    </constructor>
+  </resultMap>
+
+  <select id="activeUserExists" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM app_user WHERE user_id = #{userId} AND use_yn = 'Y')
+  </select>
+
+  <select id="activeMountainExists" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM mountain WHERE mountain_id = #{mountainId} AND use_yn = 'Y')
+  </select>
+
+  <select id="findCourse" resultMap="courseResult">
+    SELECT c.course_id, c.mountain_id, c.course_nm, c.memo, c.create_type_cd, c.rev_no,
+           CASE WHEN ST_SRID(c.geom) = 5179 AND GeometryType(c.geom) = 'LINESTRING'
+                     AND ST_NDims(c.geom) = 2 AND NOT ST_IsEmpty(c.geom) AND ST_IsValid(c.geom)
+                THEN ST_AsGeoJSON(ST_Transform(c.geom, 4326), 15, 0) END AS geometry_json,
+           c.length_m, c.xmin::text AS row_version,
+           COALESCE(ST_SRID(c.geom) = 5179 AND GeometryType(c.geom) = 'LINESTRING'
+                    AND ST_NDims(c.geom) = 2 AND NOT ST_IsEmpty(c.geom)
+                    AND ST_IsValid(c.geom), false) AS geometry_valid
+    FROM course c
+    WHERE c.course_id = #{courseId} AND c.owner_user_id = #{ownerUserId} AND c.del_yn = 'N'
+    <if test="lock">FOR UPDATE OF c</if>
+  </select>
+
+  <!-- Resolved MyBatis 3.5.14: DML RETURNING marks the session dirty, never cached.
+       The calling Service must own an explicit read-write transaction. -->
+  <select id="insertCourse" resultType="java.lang.Long" affectData="true" flushCache="true" useCache="false">
+    INSERT INTO course (
+      mountain_id, owner_user_id, course_nm, memo, create_type_cd, del_yn, rev_no, geom,
+      length_m, est_time_min, src_difficulty_mix_json, calc_difficulty_cd
+    ) VALUES (
+      #{mountainId}, #{ownerUserId}, #{courseName}, #{memo,jdbcType=VARCHAR}, #{createType}, 'N', 1,
+      ST_GeomFromEWKB(decode(#{geometryHex}, 'hex')), #{lengthM}, NULL, NULL, NULL
+    ) RETURNING course_id
+  </select>
+
+  <update id="updateCourse">
+    UPDATE course
+    <set>
+      course_nm = #{courseName}, memo = #{memo,jdbcType=VARCHAR},
+      <if test="geometryChanged">
+        geom = ST_GeomFromEWKB(decode(#{geometryHex}, 'hex')), length_m = #{lengthM},
+        rev_no = rev_no + 1,
+        est_time_min = NULL, src_difficulty_mix_json = NULL, calc_difficulty_cd = NULL,
+      </if>
+    </set>
+    WHERE course_id = #{courseId} AND owner_user_id = #{ownerUserId} AND del_yn = 'N'
+  </update>
+
+  <update id="deleteCourse">
+    UPDATE course SET del_yn = 'Y'
+    WHERE course_id = #{courseId} AND owner_user_id = #{ownerUserId} AND del_yn = 'N'
+  </update>
+
+  <resultMap id="geometryResult" type="com.allforland.orda.domain.course.vo.CourseGeometryRow">
+    <constructor>
+      <arg column="geometry_hex" javaType="java.lang.String"/>
+      <arg column="length_m" javaType="java.math.BigDecimal"/>
+      <arg column="valid" javaType="java.lang.Boolean"/>
+      <arg column="area_available" javaType="java.lang.Boolean"/>
+      <arg column="covered" javaType="java.lang.Boolean"/>
+      <arg column="same_geometry" javaType="java.lang.Boolean"/>
+    </constructor>
+  </resultMap>
+
+  <!-- Java has already checked numeric values, dimensions, counts and ranges.
+       CASE guards prevent union/covers from evaluating invalid service polygons. -->
+  <select id="prepareGeometry" resultMap="geometryResult">
+    WITH input_geometry AS (
+      SELECT ST_SetSRID(ST_GeomFromGeoJSON(#{geometryJson}), 4326) AS geom
+    ), projected AS (
+      SELECT CASE WHEN ST_IsValid(geom) AND NOT ST_IsEmpty(geom)
+                       AND GeometryType(geom) = 'LINESTRING' AND ST_NDims(geom) = 2
+                  THEN ST_Transform(geom, 5179) END AS geom
+      FROM input_geometry
+    ), area_rows AS (
+      SELECT geom,
+             COALESCE(ST_SRID(geom) = 5179 AND ST_NDims(geom) = 2
+                      AND GeometryType(geom) = 'MULTIPOLYGON'
+                      AND NOT ST_IsEmpty(geom) AND ST_IsValid(geom), false) AS valid
+      FROM service_area WHERE mountain_id = #{mountainId} AND use_yn = 'Y'
+    ), area AS (
+      SELECT count(*) > 0 AND COALESCE(bool_and(valid), false) AS available,
+             ST_Union(CASE WHEN valid THEN geom END) AS geom
+      FROM area_rows
+    ), measured AS (
+      SELECT geom, round(ST_Length(geom)::numeric, 1) AS length_m,
+             COALESCE(GeometryType(geom) = 'LINESTRING' AND ST_SRID(geom) = 5179
+                      AND ST_NDims(geom) = 2 AND NOT ST_IsEmpty(geom)
+                      AND ST_IsValid(geom), false) AS valid
+      FROM projected
+    )
+    SELECT encode(ST_AsEWKB(m.geom), 'hex') AS geometry_hex, m.length_m,
+           m.valid AND m.length_m > 0 AND m.length_m &lt;= 99999999.9 AS valid,
+           a.available AS area_available,
+           CASE WHEN a.available AND m.valid THEN ST_Covers(a.geom, m.geom)
+                ELSE false END AS covered,
+           COALESCE((SELECT ST_OrderingEquals(c.geom, m.geom)
+                     FROM course c WHERE c.course_id = #{courseId,jdbcType=BIGINT}), false)
+             AS same_geometry
+    FROM measured m CROSS JOIN area a
+  </select>
+</mapper>

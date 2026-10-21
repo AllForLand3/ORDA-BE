@@ -1,7 +1,7 @@
 # ORDA API
 
 GIS 기반 개인 맞춤형 등산 코스 탐색·분석 서비스의 백엔드입니다.
-Java 17, Spring Boot 2.7.18, eGovFrame 4.1.0, MyBatis를 사용하고 **외부 Tomcat 8.5.95에 WAR로 배포**합니다.
+Java 17, Spring Boot 2.7.18, Spring MVC, MyBatis를 사용하고 **외부 Tomcat 8.5.95에 WAR로 배포**합니다. eGovFrame 4.1.0 런타임 모듈 의존성을 포함하지만 현재 Java 소스는 eGovFrame 전용 API를 직접 사용하지 않습니다.
 Tomcat 8.5.95는 프로젝트 필수 조건입니다.
 
 ## 빌드와 검증
@@ -79,6 +79,11 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.orda\start-db-tunnel
 | OpenAPI JSON (local만) | `http://localhost:8080/v3/api-docs` |
 
 FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps/orda-api.war`로 기본 배포하면 컨텍스트가 `/orda-api`이므로 위 주소에 `/orda-api`가 붙습니다.
+
+코스 CRUD는 로그인 없는 공용 시연 작업공간을 사용합니다. `ORDA_COURSE_WORKSPACE_OWNER_USER_ID`에
+실제로 확인한 활성 시연 계정의 ID를 설정해야 하며, 누락/비활성 계정이면 코스 요청은 503입니다.
+계정이나 DB 스키마를 자동 생성하지 않습니다.
+실제 DB/API 검증은 공유 AWS DB 대신 승인된 격리 PostGIS에서 수행합니다.
 직접 배포 시 루트 컨텍스트가 필요하면 전용 Tomcat에 `ROOT.war`로 배포하거나 Tomcat Context를 별도로 구성합니다. 기존 ROOT 애플리케이션을 임의로 덮어쓰지 않습니다.
 외부 Tomcat의 컨텍스트는 `server.servlet.context-path`만으로 바뀌지 않습니다.
 
@@ -122,7 +127,8 @@ ssh -i "<pem 파일 경로>" -N -L 18080:127.0.0.1:8080 "<SSH 계정>@<EC2 공�
 ssh -i "C:\keys\orda.pem" -N -L 18080:127.0.0.1:8080 "ubuntu@203.0.113.10"
 ```
 
-터널을 켜 둔 상태에서 `http://localhost:18080/orda-api`로 접속합니다. 이 주소는 Tomcat 배포 확인용이며, 실제 API 경로는 기능 구현 후 확인합니다.
+터널을 켜 둔 상태에서 `http://localhost:18080/orda-api`로 접속합니다. 이 주소는 Tomcat 컨텍스트이며,
+코스 API 경로는 `/orda-api/api/courses`입니다. 시연 작업공간 설정과 기존 서비스 테이블이 필요합니다.
 
 컨테이너에서 `host.docker.internal`은 EC2 호스트를 가리킵니다. EC2의 PostgreSQL이 Docker 브리지 네트워크에서 접속 가능한 주소와 포트로 수신하고, 해당 컨테이너 네트워크를 `pg_hba.conf`에서 허용해야 합니다. DB 포트를 인터넷에 공개하지 않습니다. 이 DB 네트워크 설정은 현재 Compose가 자동 변경하지 않습니다.
 
@@ -162,7 +168,7 @@ CD는 DB 컨테이너를 생성하거나 외부에 DB 포트를 공개하지 않
 기본 브랜치는 `dev`이며 새 작업은 `feature/{domainName}-{detail}`, `refactor/{domainName}-{detail}`, `fix/{domainName}-{detail}`에서 진행합니다.
 작업 PR은 `dev`, 릴리스 PR은 `dev` → `main`으로 생성하며 `main` 직접 push는 금지합니다.
 커밋은 `type: 작업 내용`, PR 제목은 `[타입] 제목 (#이슈번호)`를 사용합니다.
-기능 패키지는 `com.allforland.orda.domain` 아래, Mapper XML은 `src/main/resources/sqlmap/<domain>/`에 둡니다.
+기능 패키지는 `com.allforland.orda.domain` 아래 도메인별로 둡니다(예: `com.allforland.orda.domain.course`). Mapper XML은 `src/main/resources/sqlmap/<domain>/`에 둡니다.
 
 - [구조](docs/architecture.md), [백엔드 규칙](docs/backend-convention.md)
 - [API 규칙](docs/api-convention.md), [GIS 규칙](docs/gis-convention.md)
