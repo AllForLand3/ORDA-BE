@@ -81,7 +81,7 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.orda\start-db-tunnel
 FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps/orda-api.war`로 기본 배포하면 컨텍스트가 `/orda-api`이므로 위 주소에 `/orda-api`가 붙습니다.
 
 코스 CRUD는 로그인한 사용자의 개인 코스를 다룹니다.
-로그인 후 코스 요청에 `Authorization: Bearer <accessToken>`을 보냅니다. 자세한 내용은 [회원 API](docs/auth-api.md)를 참고하세요.
+로그인 후 코스 요청에 `Authorization: Bearer <accessToken>`을 보냅니다. 
 실제 DB/API 검증은 공유 AWS DB 대신 승인된 격리 PostGIS에서 수행합니다.
 직접 배포 시 루트 컨텍스트가 필요하면 전용 Tomcat에 `ROOT.war`로 배포하거나 Tomcat Context를 별도로 구성합니다. 기존 ROOT 애플리케이션을 임의로 덮어쓰지 않습니다.
 외부 Tomcat의 컨텍스트는 `server.servlet.context-path`만으로 바뀌지 않습니다.
