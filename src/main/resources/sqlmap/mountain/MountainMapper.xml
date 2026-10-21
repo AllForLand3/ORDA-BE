@@ -23,9 +23,21 @@
               FROM service_area sa
               WHERE sa.mountain_id = m.mountain_id
                 AND sa.use_yn = 'Y'
+              
+              <if test="request.minLng != null and request.minLat != null and request.maxLng != null and request.maxLat != null">
+              	AND ST_Intersects(
+              		sa.geom,
+              		ST_Transform(
+              			ST_MakeEnvelope(
+              				#{request.minLng}, #{request.minLat}, #{request.maxLng}, #{request.maxLat}, 4326              		
+              			),
+              			5179
+              		)
+              	)
+              </if>
           )
-        <if test="keyword != null and keyword.trim() != ''">
-            AND m.mountain_nm ILIKE CONCAT('%', #{keyword}, '%')
+        <if test="request.keyword != null and request.keyword.trim() != ''">
+            AND m.mountain_nm ILIKE CONCAT('%', #{request.keyword}, '%')
         </if>
     </sql>
 

@@ -17,4 +17,10 @@ public class MountainSearchRequest {
     @Min(1)
     @Max(100)
     private int size = 20;
+
+    // BBOX 검색 조건 (EPSG:4326)
+    private Double minLng;
+    private Double minLat;
+    private Double maxLng;
+    private Double maxLat;
 }

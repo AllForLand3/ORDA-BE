@@ -29,13 +29,15 @@ public class MountainService {
             keyword = keyword.trim();
         }
 
+        validateBbox(request);
+
         int page = request.getPage();
         int size = request.getSize();
 
         long offset = (long) page * size;
 
-        List<MountainListItem> items = mountainMapper.findAll(keyword, size, offset);
-        long totalElements = mountainMapper.count(keyword);
+        List<MountainListItem> items = mountainMapper.findAll(request, size, offset);
+        long totalElements = mountainMapper.count(request);
 
         int totalPages = (int) ((totalElements + size - 1) / size);
 
@@ -58,5 +60,37 @@ public class MountainService {
         }
 
         return mountain;
+    }
+
+    private void validateBbox(MountainSearchRequest request) {
+        Double minLng = request.getMinLng();
+        Double minLat = request.getMinLat();
+        Double maxLng = request.getMaxLng();
+        Double maxLat = request.getMaxLat();
+
+        int provided = 0;
+        if (minLng != null) provided++;
+        if (minLat != null) provided++;
+        if (maxLng != null) provided++;
+        if (maxLat != null) provided++;
+
+        if (provided == 0) return;
+
+        if (provided != 4) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "BBOX 좌표는 4개 모두 입력해야 합니다.");
+        }
+
+        if (!Double.isFinite(minLng)
+                || !Double.isFinite(minLat)
+                || !Double.isFinite(maxLng)
+                || !Double.isFinite(maxLat)
+                || minLng < -180
+                || maxLng > 180
+                || minLat < -90
+                || maxLat > 90
+                || minLng >= maxLng
+                || minLat >= maxLat) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 BBOX 좌표입니다.");
+        }
     }
 }
