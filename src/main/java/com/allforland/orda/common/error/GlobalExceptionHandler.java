@@ -118,7 +118,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         LOG.error(
                 "Request failed: traceId={}, type={}",
                 TraceIdFilter.getOrCreateTraceId(request),
-                exception.getClass().getSimpleName());
+                exception.getClass().getSimpleName(),
+                exception);
         ErrorCode code = ErrorCode.INTERNAL_SERVER_ERROR;
         return ResponseEntity.status(code.getStatus())
                 .body(response(code.getStatus(), code, List.of(), request));
