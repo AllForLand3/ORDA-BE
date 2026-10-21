@@ -7,11 +7,11 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 
 @SpringBootApplication
 public class OrdaApplication extends SpringBootServletInitializer {
-	
-	 public static void main(String[] args) {
-		 SpringApplication.run(OrdaApplication.class, args);
-	 }
-	 
+
+    public static void main(String[] args) {
+        SpringApplication.run(OrdaApplication.class, args);
+    }
+
     /**
      * 외부 Tomcat에서 WAR를 초기화할 때 애플리케이션의 Spring 설정을 등록한다.
      *
