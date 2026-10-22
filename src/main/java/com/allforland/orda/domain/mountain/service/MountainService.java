@@ -74,12 +74,22 @@ public class MountainService {
         Double maxLat = request.getMaxLat();
 
         int provided = 0;
-        if (minLng != null) provided++;
-        if (minLat != null) provided++;
-        if (maxLng != null) provided++;
-        if (maxLat != null) provided++;
+        if (minLng != null) {
+            provided++;
+        }
+        if (minLat != null) {
+            provided++;
+        }
+        if (maxLng != null) {
+            provided++;
+        }
+        if (maxLat != null) {
+            provided++;
+        }
 
-        if (provided == 0) return;
+        if (provided == 0) {
+            return;
+        }
 
         if (provided != 4) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "BBOX 좌표는 4개 모두 입력해야 합니다.");
