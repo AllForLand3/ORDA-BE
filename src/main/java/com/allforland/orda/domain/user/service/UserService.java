@@ -5,19 +5,16 @@ import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.user.dto.SignupRequest;
 import com.allforland.orda.domain.user.dto.SignupResponse;
 import com.allforland.orda.domain.user.mapper.UserMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
     private final UserMapper mapper;
     private final BCryptPasswordEncoder passwords;
-
-    public UserService(UserMapper mapper, BCryptPasswordEncoder passwords) {
-        this.mapper = mapper;
-        this.passwords = passwords;
-    }
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
