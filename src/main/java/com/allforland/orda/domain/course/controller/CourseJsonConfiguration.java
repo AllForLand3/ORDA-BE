@@ -21,6 +21,8 @@ import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /** 코스 요청 JSON을 엄격하게 파싱하도록 설정한다. */
@@ -33,7 +35,7 @@ public class CourseJsonConfiguration implements WebMvcConfigurer {
     }
 
     @Override
-    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+    public void extendMessageConverters(@NonNull List<HttpMessageConverter<?>> converters) {
         ObjectMapper strictMapper = objectMapper.copy();
         strictMapper.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         strictMapper.enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
@@ -49,14 +51,19 @@ public class CourseJsonConfiguration implements WebMvcConfigurer {
         }
 
         @Override
-        protected Object readInternal(Class<?> type, HttpInputMessage inputMessage)
-                throws IOException {
+        @NonNull
+        protected Object readInternal(
+                @NonNull Class<?> type, @NonNull HttpInputMessage inputMessage) throws IOException {
             return readStrict(type, inputMessage);
         }
 
         /** Spring MVC의 제네릭 읽기 경로에도 문자열 타입 검증을 적용한다. */
         @Override
-        public Object read(Type type, Class<?> contextClass, HttpInputMessage inputMessage)
+        @NonNull
+        public Object read(
+                @NonNull Type type,
+                @Nullable Class<?> contextClass,
+                @NonNull HttpInputMessage inputMessage)
                 throws IOException {
             return readStrict((Class<?>) type, inputMessage);
         }
@@ -81,22 +88,26 @@ public class CourseJsonConfiguration implements WebMvcConfigurer {
         }
 
         @Override
-        public boolean canRead(Class<?> type, MediaType mediaType) {
+        public boolean canRead(@NonNull Class<?> type, @Nullable MediaType mediaType) {
             return courseRequest(type) && super.canRead(type, mediaType);
         }
 
         @Override
-        public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
+        public boolean canRead(
+                @NonNull Type type,
+                @Nullable Class<?> contextClass,
+                @Nullable MediaType mediaType) {
             return courseRequest(type) && super.canRead(type, contextClass, mediaType);
         }
 
         @Override
-        public boolean canWrite(Class<?> type, MediaType mediaType) {
+        public boolean canWrite(@NonNull Class<?> type, @Nullable MediaType mediaType) {
             return false;
         }
 
         @Override
-        public boolean canWrite(Type type, Class<?> valueType, MediaType mediaType) {
+        public boolean canWrite(
+                @Nullable Type type, @NonNull Class<?> valueType, @Nullable MediaType mediaType) {
             return false;
         }
 
