@@ -19,6 +19,10 @@ public class MountainService {
 
     public PageResponse<MountainListItem> getMountains(MountainSearchRequest request) {
         String keyword = request.getKeyword();
+        if (keyword != null) {
+            keyword = keyword.trim();
+        }
+
         int page = request.getPage();
         int size = request.getSize();
 
