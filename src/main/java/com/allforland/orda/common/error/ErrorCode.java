@@ -18,6 +18,7 @@ public enum ErrorCode {
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "요청이 많습니다. 잠시 후 다시 시도해주세요."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
     PRECONDITION_FAILED(HttpStatus.PRECONDITION_FAILED, "요청 조건이 일치하지 않습니다."),
+    PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "요청 본문이 너무 큽니다."),
     PRECONDITION_REQUIRED(HttpStatus.PRECONDITION_REQUIRED, "요청 조건이 필요합니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서비스를 사용할 수 없습니다."),
     INVALID_COURSE_GEOMETRY(HttpStatus.BAD_REQUEST, "코스 형상과 좌표를 확인해주세요."),
@@ -51,6 +52,7 @@ public enum ErrorCode {
             case 406 -> NOT_ACCEPTABLE;
             case 409 -> CONFLICT;
             case 412 -> PRECONDITION_FAILED;
+            case 413 -> PAYLOAD_TOO_LARGE;
             case 415 -> UNSUPPORTED_MEDIA_TYPE;
             case 422 -> UNPROCESSABLE_ENTITY;
             case 428 -> PRECONDITION_REQUIRED;

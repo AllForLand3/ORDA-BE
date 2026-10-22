@@ -1,5 +1,7 @@
 package com.allforland.orda.domain.course.controller;
 
+import com.allforland.orda.common.error.BusinessException;
+import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.course.dto.CourseCreateRequest;
 import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
 import com.fasterxml.jackson.core.JsonParser;
@@ -40,6 +42,8 @@ public class CourseJsonConfiguration implements WebMvcConfigurer {
     }
 
     private static class CourseRequestConverter extends MappingJackson2HttpMessageConverter {
+        private static final int MAX_BODY_BYTES = 128 * 1024;
+
         CourseRequestConverter(ObjectMapper mapper) {
             super(mapper);
         }
@@ -58,7 +62,11 @@ public class CourseJsonConfiguration implements WebMvcConfigurer {
         }
 
         private Object readStrict(Class<?> type, HttpInputMessage inputMessage) throws IOException {
-            byte[] body = inputMessage.getBody().readAllBytes();
+            // Read one extra byte to detect oversized bodies even without Content-Length.
+            byte[] body = inputMessage.getBody().readNBytes(MAX_BODY_BYTES + 1);
+            if (body.length > MAX_BODY_BYTES) {
+                throw new BusinessException(ErrorCode.PAYLOAD_TOO_LARGE);
+            }
             try {
                 JsonNode request = getObjectMapper().readTree(body);
                 validateStringFields(request, type);
