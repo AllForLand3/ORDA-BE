@@ -81,7 +81,15 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.orda\start-db-tunnel
 FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps/orda-api.war`로 기본 배포하면 컨텍스트가 `/orda-api`이므로 위 주소에 `/orda-api`가 붙습니다.
 
 코스 CRUD는 로그인한 사용자의 개인 코스를 다룹니다.
-로그인 후 코스 요청에 `Authorization: Bearer <accessToken>`을 보냅니다. 
+로그인 후 코스 요청에 `Authorization: Bearer <accessToken>`을 보냅니다.
+
+| 용도 | 요청 | 인증 | 성공 응답 |
+| --- | --- | --- | --- |
+| 회원가입 | `POST /api/users/signup` (`loginId`, `nickname`, `password`) | 불필요 | 201: `userId`, `loginId`, `nickname` |
+| 로그인 | `POST /api/auth/login` (`loginId`, `password`) | 불필요 | 200: `accessToken`, `tokenType`, `userId`, `loginId`, `nickname`, `role` |
+| 현재 사용자 | `GET /api/auth/me` | Bearer | 200: `userId`, `loginId`, `nickname`, `role` |
+
+요청·응답 ID는 문자열이며, 비밀번호는 응답에 포함되지 않습니다. 인증과 코스 소유권의 결정 이력은 [계약 결정](docs/contract-decisions.md)에 기록합니다.
 실제 DB/API 검증은 공유 AWS DB 대신 승인된 격리 PostGIS에서 수행합니다.
 직접 배포 시 루트 컨텍스트가 필요하면 전용 Tomcat에 `ROOT.war`로 배포하거나 Tomcat Context를 별도로 구성합니다. 기존 ROOT 애플리케이션을 임의로 덮어쓰지 않습니다.
 외부 Tomcat의 컨텍스트는 `server.servlet.context-path`만으로 바뀌지 않습니다.
@@ -174,7 +182,6 @@ CD는 DB 컨테이너를 생성하거나 외부에 DB 포트를 공개하지 않
 
 인증 migration은 `app_user.password_hash VARCHAR(255)` nullable 컬럼 하나만 추가합니다.
 기존 계정·코스·PK/FK를 변경하지 않으며 기존 해시 NULL 계정의 전환 기한과 코스 공개 정책은 별도 결정입니다.
-전후 보존 점검용 [읽기 전용 SQL](docs/auth-db-preservation.sql)을 제공하며 실제 DB에서는 실행하지 않았습니다.
 
 ## 협업 문서와 CodeRabbit
 
