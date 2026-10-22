@@ -31,6 +31,11 @@ public class MountainService {
 
         validateBbox(request);
 
+        String keyword = request.getKeyword();
+        if (keyword != null) {
+            request.setKeyword(keyword.trim());
+        }
+
         int page = request.getPage();
         int size = request.getSize();
 
