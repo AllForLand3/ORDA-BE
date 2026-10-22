@@ -17,7 +17,7 @@ public class UserController {
         this.users = users;
     }
 
-    @PostMapping("/api/users/signup")
+    @PostMapping("/users/signup")
     @ResponseStatus(HttpStatus.CREATED)
     public SignupResponse signup(@RequestBody SignupRequest request) {
         return users.signup(request);
