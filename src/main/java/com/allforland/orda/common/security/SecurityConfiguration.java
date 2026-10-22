@@ -12,6 +12,7 @@ import java.util.List;
 import javax.servlet.DispatcherType;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,12 +39,9 @@ import org.springframework.web.filter.CorsFilter;
 
 /** JWT 인증 경로, CORS와 공통 보안 오류 응답을 설정한다. */
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfiguration {
     private final ObjectMapper mapper;
-
-    public SecurityConfiguration(ObjectMapper mapper) {
-        this.mapper = mapper;
-    }
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
