@@ -1,6 +1,8 @@
 package com.allforland.orda.common.config;
 
+import com.allforland.orda.common.error.ApiErrorController;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -12,7 +14,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         configurer.addPathPrefix(
                 "api",
                 clazz ->
-                        clazz.isAnnotationPresent(
-                                org.springframework.web.bind.annotation.RestController.class));
+                        clazz.isAnnotationPresent(RestController.class)
+                                && !ApiErrorController.class.isAssignableFrom(clazz));
     }
 }
