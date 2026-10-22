@@ -19,12 +19,12 @@ public class AuthController {
         this.auth = auth;
     }
 
-    @PostMapping("/api/auth/login")
+    @PostMapping("/auth/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(auth.login(request));
     }
 
-    @GetMapping("/api/auth/me")
+    @GetMapping("/auth/me")
     public ResponseEntity<CurrentUserResponse> me() {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(auth.me());
     }
