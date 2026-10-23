@@ -91,7 +91,13 @@ psql \
     --tuples-only \
     --no-align \
     --command \
-    "SELECT 'database=' || current_database() || ', user=' || current_user || ', server=' || inet_server_addr() || ':' || inet_server_port();"
+    "SELECT 'database=' || current_database()
+         || ', user=' || current_user
+         || ', server=' || COALESCE(inet_server_addr()::text, 'unix-domain socket')
+         || CASE
+                WHEN inet_server_addr() IS NULL THEN ''
+                ELSE ':' || COALESCE(inet_server_port()::text, 'unknown')
+            END;"
 
 if [[ "${CONFIRM_SEED_RUN:-}" != "yes" ]]; then
     if [[ ! -t 0 ]]; then
