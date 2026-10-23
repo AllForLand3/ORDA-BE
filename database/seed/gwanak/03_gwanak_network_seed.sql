@@ -130,7 +130,8 @@ CREATE INDEX tmp_gwanak_noding_point_geom_gix
     USING gist (geom);
 
 -- 각 raw trail을 자신 위의 모든 noding point에서 분할한다.
--- ST_ClosestPoint로 1mm 이내의 수치 오차를 선 위에 투영한 뒤 ST_Split에 전달한다.
+-- ST_ClosestPoint로 1mm 이내의 수치 오차를 선 위에 투영하고,
+-- ST_Snap으로 교차를 보장한 뒤 ST_Split에 전달한다.
 CREATE TEMP TABLE tmp_gwanak_segment
 ON COMMIT DROP
 AS
@@ -154,7 +155,10 @@ WITH split_parts AS (
     CROSS JOIN LATERAL ST_Dump(
         CASE
             WHEN blade.geom IS NULL THEN raw.geom
-            ELSE ST_Split(raw.geom, blade.geom)
+            ELSE ST_Split(
+                ST_Snap(raw.geom, blade.geom, 0.001),
+                blade.geom
+            )
         END
     ) AS dumped
     WHERE GeometryType(dumped.geom) = 'LINESTRING'
