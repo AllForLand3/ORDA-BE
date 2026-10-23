@@ -16,10 +16,10 @@ import org.springframework.web.server.ResponseStatusException;
 public class MountainService {
 
     private final MountainMapper mountainMapper;
-    
+
     /*
      * 검색 조건에 따라 산 목록을 조회하고 페이지네이션 정보 반환
-     * 
+     *
      * @param request 산 검색어 및 페이지네이션 조건
      * @return 산 목록과 페이지네시연 정보를 포함한 응답
      */
@@ -41,10 +41,10 @@ public class MountainService {
 
         return new PageResponse<>(items, page, size, totalElements, totalPages);
     }
-    
+
     /*
      * 산 ID를 기준으로 산 상세 정보를 조회
-     * 
+     *
      * @param mountainId 조회할 산 ID
      * @return 조회된 산의 상세 정보
      * @throws ResponseStatusException 산 정보가 존재하지 않는 경우
