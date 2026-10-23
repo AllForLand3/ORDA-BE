@@ -1,9 +1,10 @@
--- 관악산 등산로 네트워크 전체 재생성
+-- 관악산 등산로 네트워크 최초 생성
 -- 대상 산: mountain_id = 2
 -- 대상 좌표계: EPSG:5179
 --
 -- 생성 원칙:
---   * mountain_id 2의 기존 trail_edge와 trail_node를 삭제한 뒤 전체를 재생성한다.
+--   * 신규 빈 DB에서 01, 02 시드 다음에 한 번 실행한다.
+--   * 기존 trail_edge 또는 trail_node가 있으면 참조 데이터와 장소 연결을 보호하기 위해 중단한다.
 --   * use_yn = 'Y'인 모든 raw_trail을 대상으로 한다.
 --   * 각 raw_trail의 시작점과 끝점을 1m 이내에서 하나의 노드로 묶는다.
 --   * 각 raw_trail당 하나의 trail_edge를 생성한다.
@@ -16,6 +17,34 @@ BEGIN;
 
 -- 같은 산에 대한 네트워크 생성이 동시에 실행되지 않도록 트랜잭션 잠금을 건다.
 SELECT pg_advisory_xact_lock(5179, 2);
+
+-- 이 파일은 신규 빈 DB의 최초 네트워크 생성 전용이다.
+-- 기존 네트워크를 삭제하면 routing_run, spot_edge_match의 FK 참조가 깨질 수 있고,
+-- FK가 없는 route_candidate.edge_seq와 기존 trail_node.place_id도 유효하지 않게 된다.
+-- 네트워크가 이미 있으면 어떤 데이터도 삭제하지 않고 전체 작업을 중단한다.
+DO $$
+DECLARE
+    existing_edge_count bigint;
+    existing_node_count bigint;
+BEGIN
+    SELECT COUNT(*)
+    INTO existing_edge_count
+    FROM public.trail_edge
+    WHERE mountain_id = 2;
+
+    SELECT COUNT(*)
+    INTO existing_node_count
+    FROM public.trail_node
+    WHERE mountain_id = 2;
+
+    IF existing_edge_count > 0 OR existing_node_count > 0 THEN
+        RAISE EXCEPTION
+            '관악산 네트워크가 이미 존재합니다(edge %, node %). 기존 참조와 place_id 연결을 보호하기 위해 최초 생성 시드를 중단합니다.',
+            existing_edge_count,
+            existing_node_count;
+    END IF;
+END
+$$;
 
 -- 빈 geometry가 있으면 네트워크 일부만 생성하지 않고 전체 작업을 중단한다.
 DO $$
@@ -31,13 +60,6 @@ BEGIN
     END IF;
 END
 $$;
-
--- FK 순서에 맞춰 edge를 먼저 삭제한다.
-DELETE FROM public.trail_edge
-WHERE mountain_id = 2;
-
-DELETE FROM public.trail_node
-WHERE mountain_id = 2;
 
 -- 전체 활성 raw trail을 이번 네트워크 생성 대상으로 고정한다.
 CREATE TEMP TABLE tmp_gwanak_raw_trail
