@@ -25,7 +25,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /** 코스 CRUD HTTP 요청을 처리한다. */
 @RestController
-@RequestMapping("/api/courses")
+@RequestMapping("/courses")
 public class CourseController {
     private final CourseService service;
     private final CourseEditTagService editTags;

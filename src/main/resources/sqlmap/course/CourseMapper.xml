@@ -16,10 +16,6 @@
     </constructor>
   </resultMap>
 
-  <select id="activeUserExists" resultType="boolean">
-    SELECT EXISTS(SELECT 1 FROM app_user WHERE user_id = #{userId} AND use_yn = 'Y')
-  </select>
-
   <select id="activeMountainExists" resultType="boolean">
     SELECT EXISTS(SELECT 1 FROM mountain WHERE mountain_id = #{mountainId} AND use_yn = 'Y')
   </select>

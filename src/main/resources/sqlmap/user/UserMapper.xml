@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.allforland.orda.domain.user.mapper.UserMapper">
+  <resultMap id="userResult" type="com.allforland.orda.domain.user.vo.UserAccount">
+    <constructor>
+      <idArg column="user_id" javaType="java.lang.Long"/>
+      <arg column="login_id" javaType="java.lang.String"/>
+      <arg column="user_nm" javaType="java.lang.String"/>
+      <arg column="role_cd" javaType="java.lang.String"/>
+      <arg column="use_yn" javaType="java.lang.String"/>
+      <arg column="password_hash" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+  <select id="findByLoginId" resultMap="userResult" useCache="false">
+    SELECT user_id, login_id, user_nm, role_cd, use_yn, password_hash
+    FROM app_user WHERE login_id = #{loginId}
+  </select>
+  <select id="findByUserId" resultMap="userResult" useCache="false">
+    SELECT user_id, login_id, user_nm, role_cd, use_yn, password_hash
+    FROM app_user WHERE user_id = #{userId}
+  </select>
+  <!-- As in CourseMapper, INSERT RETURNING is a data-changing select in MyBatis 3.5.14. -->
+  <select id="insertUser" resultType="java.lang.Long" affectData="true" flushCache="true" useCache="false">
+    INSERT INTO app_user (login_id, user_nm, password_hash, role_cd, use_yn)
+    VALUES (#{loginId}, #{userNm}, #{passwordHash}, 'USER', 'Y')
+    ON CONFLICT (login_id) DO NOTHING
+    RETURNING user_id
+  </select>
+</mapper>
