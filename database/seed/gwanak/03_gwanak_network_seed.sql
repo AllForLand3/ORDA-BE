@@ -6,8 +6,9 @@
 --   * 신규 빈 DB에서 01, 02 시드 다음에 한 번 실행한다.
 --   * 기존 trail_edge 또는 trail_node가 있으면 참조 데이터와 장소 연결을 보호하기 위해 중단한다.
 --   * use_yn = 'Y'인 모든 raw_trail을 대상으로 한다.
---   * 각 raw_trail의 시작점과 끝점을 1m 이내에서 하나의 노드로 묶는다.
---   * 각 raw_trail당 하나의 trail_edge를 생성한다.
+--   * raw trail을 모든 교차점에서 분할하고 분할 구간의 끝점을 노드 후보로 사용한다.
+--   * 서로 1m 이내인 분할 구간 끝점을 하나의 노드로 묶는다.
+--   * 분할 구간마다 trail_edge를 생성하고 원본 raw_trail_id를 보존한다.
 --   * 원천 데이터만으로 진행 방향을 확정할 수 없으므로 방향·시간·고도 값은
 --     UNKNOWN 또는 NULL로 두고 원천 값은 raw_trail에 보존한다.
 --   * length_m은 EPSG:5179 geometry의 실제 길이로 계산한다.
@@ -46,9 +47,21 @@ BEGIN
 END
 $$;
 
--- 빈 geometry가 있으면 네트워크 일부만 생성하지 않고 전체 작업을 중단한다.
+-- 활성 raw trail이 없거나 빈 geometry가 있으면 전체 작업을 중단한다.
 DO $$
+DECLARE
+    active_raw_trail_count bigint;
 BEGIN
+    SELECT COUNT(*)
+    INTO active_raw_trail_count
+    FROM public.raw_trail
+    WHERE mountain_id = 2
+      AND use_yn = 'Y';
+
+    IF active_raw_trail_count = 0 THEN
+        RAISE EXCEPTION 'mountain_id 2의 활성 raw_trail이 없습니다.';
+    END IF;
+
     IF EXISTS (
         SELECT 1
         FROM public.raw_trail
@@ -76,35 +89,200 @@ WHERE rt.mountain_id = 2
 CREATE UNIQUE INDEX tmp_gwanak_raw_trail_pk
     ON tmp_gwanak_raw_trail (raw_trail_id);
 
--- 각 선형 geometry에서 시작점과 끝점을 추출한다.
+-- 전체 선형을 교차점에서 noding한 뒤 모든 교차점 후보를 추출한다.
+-- 한 raw trail의 끝점이 다른 raw trail의 내부에 닿는 경우도 이 단계에서 노드 후보가 된다.
+CREATE TEMP TABLE tmp_gwanak_noded_line
+ON COMMIT DROP
+AS
+WITH linework AS (
+    SELECT ST_UnaryUnion(ST_Collect(geom)) AS geom
+    FROM tmp_gwanak_raw_trail
+)
+SELECT
+    ROW_NUMBER() OVER (ORDER BY ST_AsEWKB(dumped.geom))::bigint AS noded_line_id,
+    dumped.geom::geometry(LineString, 5179) AS geom
+FROM linework
+CROSS JOIN LATERAL ST_Dump(ST_CollectionExtract(linework.geom, 2)) AS dumped;
+
+CREATE UNIQUE INDEX tmp_gwanak_noded_line_pk
+    ON tmp_gwanak_noded_line (noded_line_id);
+
+CREATE INDEX tmp_gwanak_noded_line_geom_gix
+    ON tmp_gwanak_noded_line
+    USING gist (geom);
+
+CREATE TEMP TABLE tmp_gwanak_noding_point
+ON COMMIT DROP
+AS
+SELECT ST_StartPoint(geom)::geometry(Point, 5179) AS geom
+FROM tmp_gwanak_noded_line
+
+UNION
+
+SELECT ST_EndPoint(geom)::geometry(Point, 5179) AS geom
+FROM tmp_gwanak_noded_line;
+
+CREATE UNIQUE INDEX tmp_gwanak_noding_point_pk
+    ON tmp_gwanak_noding_point (ST_AsEWKB(geom));
+
+CREATE INDEX tmp_gwanak_noding_point_geom_gix
+    ON tmp_gwanak_noding_point
+    USING gist (geom);
+
+-- 각 raw trail을 자신 위의 모든 noding point에서 분할한다.
+-- ST_ClosestPoint로 1mm 이내의 수치 오차를 선 위에 투영한 뒤 ST_Split에 전달한다.
+CREATE TEMP TABLE tmp_gwanak_segment
+ON COMMIT DROP
+AS
+WITH split_parts AS (
+    SELECT
+        raw.raw_trail_id,
+        raw.mountain_id,
+        raw.geom AS raw_geom,
+        dumped.geom::geometry(LineString, 5179) AS geom
+    FROM tmp_gwanak_raw_trail AS raw
+    LEFT JOIN LATERAL (
+        SELECT ST_Collect(projected.geom) AS geom
+        FROM (
+            SELECT ST_ClosestPoint(raw.geom, point.geom)::geometry(Point, 5179) AS geom
+            FROM tmp_gwanak_noding_point AS point
+            WHERE ST_DWithin(raw.geom, point.geom, 0.001)
+            GROUP BY ST_ClosestPoint(raw.geom, point.geom)
+        ) AS projected
+    ) AS blade
+      ON TRUE
+    CROSS JOIN LATERAL ST_Dump(
+        CASE
+            WHEN blade.geom IS NULL THEN raw.geom
+            ELSE ST_Split(raw.geom, blade.geom)
+        END
+    ) AS dumped
+    WHERE GeometryType(dumped.geom) = 'LINESTRING'
+      AND ST_Length(dumped.geom) > 0.001
+),
+oriented_parts AS (
+    SELECT
+        raw_trail_id,
+        mountain_id,
+        CASE
+            WHEN ST_LineLocatePoint(raw_geom, ST_StartPoint(geom))
+               <= ST_LineLocatePoint(raw_geom, ST_EndPoint(geom))
+                THEN geom
+            ELSE ST_Reverse(geom)::geometry(LineString, 5179)
+        END AS geom,
+        LEAST(
+            ST_LineLocatePoint(raw_geom, ST_StartPoint(geom)),
+            ST_LineLocatePoint(raw_geom, ST_EndPoint(geom))
+        ) AS start_fraction
+    FROM split_parts
+)
+SELECT
+    ROW_NUMBER() OVER (
+        ORDER BY raw_trail_id, start_fraction, ST_AsEWKB(geom)
+    )::bigint AS segment_id,
+    raw_trail_id,
+    mountain_id,
+    geom
+FROM oriented_parts;
+
+CREATE UNIQUE INDEX tmp_gwanak_segment_pk
+    ON tmp_gwanak_segment (segment_id);
+
+CREATE INDEX tmp_gwanak_segment_raw_trail_idx
+    ON tmp_gwanak_segment (raw_trail_id);
+
+CREATE INDEX tmp_gwanak_segment_geom_gix
+    ON tmp_gwanak_segment
+    USING gist (geom);
+
+-- 분할 과정에서 raw trail이 누락되거나 교차점이 분할되지 않았으면 중단한다.
+DO $$
+DECLARE
+    invalid_segment_source_count bigint;
+    unsplit_noding_point_count bigint;
+BEGIN
+    WITH segment_summary AS (
+        SELECT
+            raw_trail_id,
+            COUNT(*) AS segment_count,
+            SUM(ST_Length(geom)) AS total_length_m
+        FROM tmp_gwanak_segment
+        GROUP BY raw_trail_id
+    )
+    SELECT COUNT(*)
+    INTO invalid_segment_source_count
+    FROM tmp_gwanak_raw_trail AS raw
+    LEFT JOIN segment_summary AS summary
+      ON summary.raw_trail_id = raw.raw_trail_id
+    WHERE summary.segment_count IS NULL
+       OR ABS(ST_Length(raw.geom) - summary.total_length_m) > 0.01;
+
+    IF invalid_segment_source_count > 0 THEN
+        RAISE EXCEPTION
+            '분할 구간이 누락됐거나 원본 길이와 일치하지 않는 raw_trail이 %건 있습니다.',
+            invalid_segment_source_count;
+    END IF;
+
+    SELECT COUNT(*)
+    INTO unsplit_noding_point_count
+    FROM tmp_gwanak_raw_trail AS raw
+    JOIN tmp_gwanak_noding_point AS point
+      ON ST_DWithin(raw.geom, point.geom, 0.001)
+    CROSS JOIN LATERAL (
+        SELECT ST_ClosestPoint(raw.geom, point.geom)::geometry(Point, 5179) AS geom
+    ) AS projected
+    WHERE ST_LineLocatePoint(raw.geom, projected.geom) > 0.000000001
+      AND ST_LineLocatePoint(raw.geom, projected.geom) < 0.999999999
+      AND NOT EXISTS (
+          SELECT 1
+          FROM tmp_gwanak_segment AS segment
+          WHERE segment.raw_trail_id = raw.raw_trail_id
+            AND (
+                ST_DWithin(ST_StartPoint(segment.geom), projected.geom, 0.001)
+                OR ST_DWithin(ST_EndPoint(segment.geom), projected.geom, 0.001)
+            )
+      );
+
+    IF unsplit_noding_point_count > 0 THEN
+        RAISE EXCEPTION
+            'raw_trail 내부의 noding point 중 분할 구간 끝점으로 반영되지 않은 지점이 %건 있습니다.',
+            unsplit_noding_point_count;
+    END IF;
+END
+$$;
+
+-- 분할된 각 segment에서 시작점과 끝점을 추출한다.
 CREATE TEMP TABLE tmp_gwanak_endpoint
 ON COMMIT DROP
 AS
 SELECT
     ROW_NUMBER() OVER (
-        ORDER BY endpoint.raw_trail_id, endpoint.endpoint_type
+        ORDER BY endpoint.segment_id, endpoint.endpoint_type
     )::bigint AS endpoint_id,
+    endpoint.segment_id,
     endpoint.raw_trail_id,
     endpoint.endpoint_type,
     endpoint.geom
 FROM (
     SELECT
+        segment_id,
         raw_trail_id,
         'SOURCE'::varchar AS endpoint_type,
         ST_StartPoint(geom)::geometry(Point, 5179) AS geom
-    FROM tmp_gwanak_raw_trail
+    FROM tmp_gwanak_segment
 
     UNION ALL
 
     SELECT
+        segment_id,
         raw_trail_id,
         'TARGET'::varchar AS endpoint_type,
         ST_EndPoint(geom)::geometry(Point, 5179) AS geom
-    FROM tmp_gwanak_raw_trail
+    FROM tmp_gwanak_segment
 ) AS endpoint;
 
 CREATE UNIQUE INDEX tmp_gwanak_endpoint_pk
-    ON tmp_gwanak_endpoint (raw_trail_id, endpoint_type);
+    ON tmp_gwanak_endpoint (segment_id, endpoint_type);
 
 CREATE UNIQUE INDEX tmp_gwanak_endpoint_id_uq
     ON tmp_gwanak_endpoint (endpoint_id);
@@ -150,6 +328,7 @@ cluster_membership AS (
     GROUP BY reached_endpoint_id
 )
 SELECT
+    endpoint.segment_id,
     endpoint.raw_trail_id,
     endpoint.endpoint_type,
     endpoint.geom,
@@ -159,13 +338,13 @@ JOIN cluster_membership AS membership
   ON membership.endpoint_id = endpoint.endpoint_id;
 
 CREATE UNIQUE INDEX tmp_gwanak_endpoint_clustered_pk
-    ON tmp_gwanak_endpoint_clustered (raw_trail_id, endpoint_type);
+    ON tmp_gwanak_endpoint_clustered (segment_id, endpoint_type);
 
 CREATE INDEX tmp_gwanak_endpoint_clustered_cluster_idx
     ON tmp_gwanak_endpoint_clustered (cluster_no);
 
 -- 각 군집에서 정렬상 첫 번째 끝점을 대표 노드 좌표로 사용한다.
--- 평균 좌표를 사용하지 않으므로 노드는 항상 실제 raw_trail 끝점과 일치한다.
+-- 평균 좌표를 사용하지 않으므로 노드는 항상 실제 segment 끝점과 일치한다.
 CREATE TEMP TABLE tmp_gwanak_node_candidate
 ON COMMIT DROP
 AS
@@ -173,7 +352,7 @@ SELECT DISTINCT ON (cluster_no)
     cluster_no,
     geom
 FROM tmp_gwanak_endpoint_clustered
-ORDER BY cluster_no, raw_trail_id, endpoint_type;
+ORDER BY cluster_no, segment_id, endpoint_type;
 
 CREATE UNIQUE INDEX tmp_gwanak_node_candidate_cluster_uq
     ON tmp_gwanak_node_candidate (cluster_no);
@@ -212,11 +391,12 @@ CREATE UNIQUE INDEX tmp_gwanak_node_map_cluster_uq
 CREATE UNIQUE INDEX tmp_gwanak_node_map_node_uq
     ON tmp_gwanak_node_map (node_id);
 
--- 각 raw trail의 시작 노드와 끝 노드를 결정한다.
+-- 각 분할 segment의 시작 노드와 끝 노드를 결정한다.
 CREATE TEMP TABLE tmp_gwanak_edge_node_map
 ON COMMIT DROP
 AS
 SELECT
+    source_endpoint.segment_id,
     source_endpoint.raw_trail_id,
     source_node.node_id AS source_node_id,
     target_node.node_id AS target_node_id
@@ -224,16 +404,16 @@ FROM tmp_gwanak_endpoint_clustered AS source_endpoint
 JOIN tmp_gwanak_node_map AS source_node
   ON source_node.cluster_no = source_endpoint.cluster_no
 JOIN tmp_gwanak_endpoint_clustered AS target_endpoint
-  ON target_endpoint.raw_trail_id = source_endpoint.raw_trail_id
+  ON target_endpoint.segment_id = source_endpoint.segment_id
  AND target_endpoint.endpoint_type = 'TARGET'
 JOIN tmp_gwanak_node_map AS target_node
   ON target_node.cluster_no = target_endpoint.cluster_no
 WHERE source_endpoint.endpoint_type = 'SOURCE';
 
 CREATE UNIQUE INDEX tmp_gwanak_edge_node_map_pk
-    ON tmp_gwanak_edge_node_map (raw_trail_id);
+    ON tmp_gwanak_edge_node_map (segment_id);
 
--- raw trail 하나당 edge 하나를 생성한다.
+-- 분할 segment 하나당 edge 하나를 생성하며 원본 raw_trail_id를 보존한다.
 INSERT INTO public.trail_edge (
     mountain_id,
     source_node_id,
@@ -251,12 +431,12 @@ INSERT INTO public.trail_edge (
     pass_yn
 )
 SELECT
-    raw.mountain_id,
+    segment.mountain_id,
     edge_node.source_node_id,
     edge_node.target_node_id,
-    raw.raw_trail_id,
-    raw.geom,
-    ST_Length(raw.geom),
+    segment.raw_trail_id,
+    segment.geom,
+    ST_Length(segment.geom),
     NULL,
     'UNKNOWN',
     NULL,
@@ -265,10 +445,10 @@ SELECT
     NULL,
     0,
     'Y'
-FROM tmp_gwanak_raw_trail AS raw
+FROM tmp_gwanak_segment AS segment
 JOIN tmp_gwanak_edge_node_map AS edge_node
-  ON edge_node.raw_trail_id = raw.raw_trail_id
-ORDER BY raw.raw_trail_id;
+  ON edge_node.segment_id = segment.segment_id
+ORDER BY segment.segment_id;
 
 -- 각 노드에 접속한 edge 수를 계산한다. 자기 루프는 차수 2로 계산된다.
 WITH incident_edge AS (
@@ -317,7 +497,7 @@ FROM ranked
 WHERE trail_node.mountain_id = 2
   AND trail_node.node_id = ranked.node;
 
--- 생성 결과가 입력 raw trail과 일치하지 않으면 트랜잭션을 중단한다.
+-- 생성 결과가 분할 segment와 일치하지 않으면 트랜잭션을 중단한다.
 DO $$
 DECLARE
     expected_edge_count bigint;
@@ -326,7 +506,7 @@ DECLARE
 BEGIN
     SELECT COUNT(*)
     INTO expected_edge_count
-    FROM tmp_gwanak_raw_trail;
+    FROM tmp_gwanak_segment;
 
     SELECT COUNT(*)
     INTO actual_edge_count
