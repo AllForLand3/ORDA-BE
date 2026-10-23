@@ -5,6 +5,11 @@ import com.allforland.orda.domain.mountain.dto.MountainDetailResponse;
 import com.allforland.orda.domain.mountain.dto.MountainListItem;
 import com.allforland.orda.domain.mountain.dto.MountainSearchRequest;
 import com.allforland.orda.domain.mountain.mapper.MountainMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class MountainService {
 
+    private final ObjectMapper objectMapper;
     private final MountainMapper mountainMapper;
 
     /*
@@ -60,6 +66,41 @@ public class MountainService {
         }
 
         return mountain;
+    }
+
+    /*
+     * 산별 서비스 가능 영역을 GeoJSON FeatureCollection 형식으로 조회
+     *
+     * @param mountainId 조회할 산 ID
+     * @return 서비스 가능 영역 GeoJSON FeatureCollection
+     */
+    public JsonNode getServiceAreaGeoJson(Long mountainId) {
+        getMountain(mountainId);
+
+        List<String> geometries = mountainMapper.findServiceAreaGeoJson(mountainId);
+
+        ObjectNode featureCollection = objectMapper.createObjectNode();
+        featureCollection.put("type", "FeatureCollection");
+
+        ArrayNode features = featureCollection.putArray("features");
+
+        for (String geometry : geometries) {
+            try {
+                ObjectNode feature = objectMapper.createObjectNode();
+                feature.put("type", "Feature");
+
+                feature.set("geometry", objectMapper.readTree(geometry));
+
+                ObjectNode properties = feature.putObject("properties");
+                properties.put("mountainId", mountainId);
+
+                features.add(feature);
+            } catch (JsonProcessingException e) {
+                throw new IllegalStateException("서비스 가능 영역 GeoJSON 변환에 실패했습니다.", e);
+            }
+        }
+
+        return featureCollection;
     }
 
     /*

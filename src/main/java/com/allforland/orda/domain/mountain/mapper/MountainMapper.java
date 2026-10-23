@@ -16,4 +16,6 @@ public interface MountainMapper {
     long count(@Param("request") MountainSearchRequest request);
 
     MountainDetailResponse findById(Long mountainId);
+
+    List<String> findServiceAreaGeoJson(Long mountainId);
 }

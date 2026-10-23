@@ -75,4 +75,18 @@
                 AND sa.use_yn = 'Y'
           )
     </select>
+    
+    <select id="findServiceAreaGeoJson" resultType="string">
+	    SELECT
+	        ST_AsGeoJSON(
+	            ST_Transform(sa.geom, 4326)
+	        )
+	    FROM service_area sa
+	    JOIN mountain m
+	        ON m.mountain_id = sa.mountain_id
+	    WHERE sa.mountain_id = #{mountainId}
+	      AND sa.use_yn = 'Y'
+	      AND m.use_yn = 'Y'
+	      AND sa.geom IS NOT NULL
+	</select>
 </mapper>
