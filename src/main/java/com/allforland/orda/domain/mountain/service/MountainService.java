@@ -18,23 +18,18 @@ public class MountainService {
     private final MountainMapper mountainMapper;
 
     /*
-     * 검색 조건에 따라 산 목록을 조회하고 페이지네이션 정보 반환
+     * 검색어 및 BBOX 조건에 따라 산 목록을 조회하고 페이지네이션 정보 반환
      *
-     * @param request 산 검색어 및 페이지네이션 조건
+     * @param request 산 검색어, BBOX 좌표 및 페이지네이션 조건
      * @return 산 목록과 페이지네시연 정보를 포함한 응답
      */
     public PageResponse<MountainListItem> getMountains(MountainSearchRequest request) {
         String keyword = request.getKeyword();
         if (keyword != null) {
-            keyword = keyword.trim();
+            request.setKeyword(keyword.trim());
         }
 
         validateBbox(request);
-
-        String keyword = request.getKeyword();
-        if (keyword != null) {
-            request.setKeyword(keyword.trim());
-        }
 
         int page = request.getPage();
         int size = request.getSize();
@@ -67,6 +62,16 @@ public class MountainService {
         return mountain;
     }
 
+    /*
+     * BBOX 좌표의 입력 여부와 유효성을 검증
+     *
+     * BBOX는 최소 경도, 최소 위도, 최대 경도, 최대 위도 4개의 값으로 구성됨
+     * 좌표를 모두 생략하면 공간 검색 조건 없이 조회하며,
+     * 일부만 입력하거나 좌표 범위가 올바르지 않으면 400 오류 반환
+     *
+     * @param request BBOX 좌표가 포함된 산 검색 요청
+     * @throws ResponseStatusException BBOX 좌표가 누락되거나 유효하지 않은 경우
+     */
     private void validateBbox(MountainSearchRequest request) {
         Double minLng = request.getMinLng();
         Double minLat = request.getMinLat();
