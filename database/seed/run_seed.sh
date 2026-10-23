@@ -2,6 +2,9 @@
 
 set -Eeuo pipefail
 
+# 시드 SQL 파일은 UTF-8이므로 Windows 로캘과 무관하게 psql 입력 인코딩을 고정한다.
+export PGCLIENTENCODING=UTF8
+
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
