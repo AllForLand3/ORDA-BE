@@ -80,9 +80,16 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.orda\start-db-tunnel
 
 FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps/orda-api.war`로 기본 배포하면 컨텍스트가 `/orda-api`이므로 위 주소에 `/orda-api`가 붙습니다.
 
-코스 CRUD는 로그인 없는 공용 시연 작업공간을 사용합니다. `ORDA_COURSE_WORKSPACE_OWNER_USER_ID`에
-실제로 확인한 활성 시연 계정의 ID를 설정해야 하며, 누락/비활성 계정이면 코스 요청은 503입니다.
-계정이나 DB 스키마를 자동 생성하지 않습니다.
+코스 CRUD는 로그인한 사용자의 개인 코스를 다룹니다.
+로그인 후 코스 요청에 `Authorization: Bearer <accessToken>`을 보냅니다.
+
+| 용도 | 요청 | 인증 | 성공 응답 |
+| --- | --- | --- | --- |
+| 회원가입 | `POST /api/users/signup` (`loginId`, `nickname`, `password`) | 불필요 | 201: `userId`, `loginId`, `nickname` |
+| 로그인 | `POST /api/auth/login` (`loginId`, `password`) | 불필요 | 200: `accessToken`, `tokenType`, `userId`, `loginId`, `nickname`, `role` |
+| 현재 사용자 | `GET /api/auth/me` | Bearer | 200: `userId`, `loginId`, `nickname`, `role` |
+
+요청·응답 ID는 문자열이며, 비밀번호는 응답에 포함되지 않습니다. 인증과 코스 소유권의 결정 이력은 [계약 결정](docs/contract-decisions.md)에 기록합니다.
 실제 DB/API 검증은 공유 AWS DB 대신 승인된 격리 PostGIS에서 수행합니다.
 직접 배포 시 루트 컨텍스트가 필요하면 전용 Tomcat에 `ROOT.war`로 배포하거나 Tomcat Context를 별도로 구성합니다. 기존 ROOT 애플리케이션을 임의로 덮어쓰지 않습니다.
 외부 Tomcat의 컨텍스트는 `server.servlet.context-path`만으로 바뀌지 않습니다.
@@ -94,10 +101,14 @@ FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps
 - `SPRING_DATASOURCE_URL`
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
+- `ORDA_AUTH_JWT_SECRET_BASE64`: 최소 32바이트 암호학적 난수의 Base64. 기본값 없음, 부적합하면 기동 실패
+- `ORDA_AUTH_JWT_ACCESS_TOKEN_SECONDS`: 기본 3600초(1시간), 허용 1~3600초
+- `ORDA_AUTH_CORS_ALLOWED_ORIGINS`: 다른 출처에서 직접 호출할 FE Origin. 로컬 예시 `http://localhost:5173`, 여러 개는 쉼표로 구분. 기본 빈 값이며 `*`는 허용하지 않음
 
 운영에는 개인 홈의 `.orda` 파일이 필요하지 않습니다. API 문서 노출은 기본 비활성화입니다.
 운영 프록시의 `/api` 전달 경로는 실제 Tomcat 컨텍스트와 맞춰야 합니다.
-인증 방식은 미확정입니다. 이 초기 세팅은 사용자·관리자 권한이 필요한 API의 공개 배포 준비 완료를 의미하지 않습니다.
+JWT 키 생성 방법은 [.env.example](.env.example)의 주석을 참고하세요.
+`.env`는 Compose에서 사용하며, IDE/Tomcat 실행 시에는 환경변수를 직접 설정합니다.
 
 ## Docker로 EC2에서 수동 실행
 
@@ -105,12 +116,12 @@ FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps
 
 1. EC2에 Docker Engine과 Docker Compose 플러그인을 설치하고 저장소를 준비합니다.
 2. 저장소 루트에서 `bash ./mvnw clean package`를 실행해 `target/orda-api.war`를 만듭니다. Windows에서 `.\mvnw.cmd clean package`로 빌드한다면, 먼저 EC2 저장소 루트에서 `mkdir -p target`을 실행한 뒤 Windows의 `target/orda-api.war`를 EC2의 해당 디렉터리에 복사합니다.
-3. `.env.example`을 `.env`로 복사하고 운영 DB URL, 사용자명, 비밀번호를 입력합니다. `.env`는 Git에서 제외됩니다.
+3. `.env.example`을 `.env`로 복사하고 DB URL·사용자명·비밀번호와 JWT 키를 입력합니다. `.env`는 Git에서 제외됩니다.
 4. EC2에서 `docker compose up --build -d`로 이미지를 만들고 컨테이너를 시작합니다.
 
 ```bash
 cp .env.example .env
-# .env의 DB 사용자명과 비밀번호를 실제 값으로 설정한 뒤:
+# .env의 DB 접속 정보와 JWT 키를 설정하고 migration 적용 승인을 받은 뒤:
 docker compose up --build -d
 docker compose logs -f backend
 ```
@@ -128,7 +139,7 @@ ssh -i "C:\keys\orda.pem" -N -L 18080:127.0.0.1:8080 "ubuntu@203.0.113.10"
 ```
 
 터널을 켜 둔 상태에서 `http://localhost:18080/orda-api`로 접속합니다. 이 주소는 Tomcat 컨텍스트이며,
-코스 API 경로는 `/orda-api/api/courses`입니다. 시연 작업공간 설정과 기존 서비스 테이블이 필요합니다.
+코스 API 경로는 `/orda-api/api/courses`입니다. JWT 로그인·신규 migration·기존 서비스 테이블이 필요합니다.
 
 컨테이너에서 `host.docker.internal`은 EC2 호스트를 가리킵니다. EC2의 PostgreSQL이 Docker 브리지 네트워크에서 접속 가능한 주소와 포트로 수신하고, 해당 컨테이너 네트워크를 `pg_hba.conf`에서 허용해야 합니다. DB 포트를 인터넷에 공개하지 않습니다. 이 DB 네트워크 설정은 현재 Compose가 자동 변경하지 않습니다.
 
@@ -154,14 +165,23 @@ APP_HOST_PORT=8080
 SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:55432/gwanak_dev
 SPRING_DATASOURCE_USERNAME=<DB 사용자명>
 SPRING_DATASOURCE_PASSWORD=<DB 비밀번호>
+ORDA_AUTH_JWT_SECRET_BASE64=<외부에서 안전하게 생성한 난수 키의 Base64>
+ORDA_AUTH_JWT_ACCESS_TOKEN_SECONDS=3600
+ORDA_AUTH_CORS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
 CD는 DB 컨테이너를 생성하거나 외부에 DB 포트를 공개하지 않습니다. 새 애플리케이션 이미지를 빌드한 후 기존 `orda-api` 컨테이너만 갱신하며, 애플리케이션 시작 과정에서 Flyway가 미적용 migration을 실행합니다.
+
+새 WAR의 첫 기동 전 DB 적용 승인과 키 설정이 필요합니다. Compose의 구성 검사에는 빈 예시 키를 허용하지만,
+실제 애플리케이션은 빈 키로 기동하지 않습니다. 이번 작업에서는 CD 실행·공유 DB 연결·migration 적용을 하지 않았습니다.
 
 ## DB 변경 관리
 
 신규 빈 DB용 초기 Migration을 관리하며, 애플리케이션 시작 시 Flyway가 `src/main/resources/db/migration/`의 미적용 SQL을 실행합니다.
 초기 Migration은 PostGIS·pgRouting 확장을 생성하므로 DB 계정에 확장 생성 권한이 필요합니다. 기존 DB를 Flyway 대상으로 전환할 때는 [DB 규칙](docs/database-convention.md)에 따라 별도의 baseline 전략을 합의합니다.
+
+인증 migration은 `app_user.password_hash VARCHAR(255)` nullable 컬럼 하나만 추가합니다.
+기존 계정·코스·PK/FK를 변경하지 않으며 기존 해시 NULL 계정의 전환 기한과 코스 공개 정책은 별도 결정입니다.
 
 ## 협업 문서와 CodeRabbit
 

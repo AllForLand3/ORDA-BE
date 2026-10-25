@@ -9,6 +9,7 @@ import com.allforland.orda.domain.course.service.CourseEditTagService;
 import com.allforland.orda.domain.course.service.CourseService;
 import java.net.URI;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -25,15 +26,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /** 코스 CRUD HTTP 요청을 처리한다. */
 @RestController
-@RequestMapping("/api/courses")
+@RequiredArgsConstructor
+@RequestMapping("/courses")
 public class CourseController {
     private final CourseService service;
     private final CourseEditTagService editTags;
-
-    public CourseController(CourseService service, CourseEditTagService editTags) {
-        this.service = service;
-        this.editTags = editTags;
-    }
 
     /** 코스 형상을 등록하고 상세 응답과 ETag를 반환한다. */
     @PostMapping
