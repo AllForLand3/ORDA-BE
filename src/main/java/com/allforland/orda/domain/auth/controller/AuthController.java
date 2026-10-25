@@ -4,6 +4,7 @@ import com.allforland.orda.domain.auth.dto.CurrentUserResponse;
 import com.allforland.orda.domain.auth.dto.LoginRequest;
 import com.allforland.orda.domain.auth.dto.LoginResponse;
 import com.allforland.orda.domain.auth.service.AuthService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,12 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 public class AuthController {
     private final AuthService auth;
-
-    public AuthController(AuthService auth) {
-        this.auth = auth;
-    }
 
     @PostMapping("/auth/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {

@@ -1,9 +1,11 @@
 package com.allforland.orda.common.error;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 @Getter
+@RequiredArgsConstructor
 public enum ErrorCode {
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 형식이나 입력값을 확인해주세요."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
@@ -32,11 +34,6 @@ public enum ErrorCode {
 
     private final HttpStatus status;
     private final String message;
-
-    ErrorCode(HttpStatus status, String message) {
-        this.status = status;
-        this.message = message;
-    }
 
     public static ErrorCode fromStatus(HttpStatus status) {
         return fromStatus(status.value());

@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.MediaType;
@@ -27,12 +28,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /** 코스 요청 JSON을 엄격하게 파싱하도록 설정한다. */
 @Configuration
+@RequiredArgsConstructor
 public class CourseJsonConfiguration implements WebMvcConfigurer {
     private final ObjectMapper objectMapper;
-
-    public CourseJsonConfiguration(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
 
     @Override
     public void extendMessageConverters(@NonNull List<HttpMessageConverter<?>> converters) {

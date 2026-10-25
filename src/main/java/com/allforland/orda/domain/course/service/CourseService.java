@@ -16,29 +16,20 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 코스 CRUD의 검증과 업무 규칙을 처리한다. */
 @Service
+@RequiredArgsConstructor
 public class CourseService {
     private static final BigDecimal MAXIMUM_LENGTH = new BigDecimal("99999999.9");
     private final CourseMapper mapper;
     private final AuthService authService;
     private final ObjectMapper objectMapper;
     private final CourseEditTagService editTags;
-
-    public CourseService(
-            CourseMapper mapper,
-            AuthService authService,
-            ObjectMapper objectMapper,
-            CourseEditTagService editTags) {
-        this.mapper = mapper;
-        this.authService = authService;
-        this.objectMapper = objectMapper;
-        this.editTags = editTags;
-    }
 
     /** 코스 입력을 검증하고 새 코스를 저장한다. */
     @Transactional
