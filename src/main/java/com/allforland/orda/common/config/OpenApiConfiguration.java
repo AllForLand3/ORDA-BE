@@ -12,5 +12,6 @@ import org.springframework.context.annotation.Configuration;
         name = "bearerAuth",
         type = SecuritySchemeType.HTTP,
         scheme = "bearer",
-        bearerFormat = "JWT")
+        bearerFormat = "JWT",
+        description = "Bearer 접두사 없이 JWT access token 값만 입력하세요.")
 public class OpenApiConfiguration {}
