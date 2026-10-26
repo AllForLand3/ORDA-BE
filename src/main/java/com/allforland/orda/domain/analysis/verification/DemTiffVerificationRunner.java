@@ -19,6 +19,7 @@ import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageTypeSpecifier;
 import javax.imageio.ImageWriter;
+import javax.imageio.plugins.tiff.GeoTIFFTagSet;
 import javax.imageio.plugins.tiff.TIFFDirectory;
 import javax.imageio.plugins.tiff.TIFFField;
 import javax.imageio.plugins.tiff.TIFFTag;
@@ -161,6 +162,15 @@ public class DemTiffVerificationRunner implements ApplicationRunner {
                     "Service elevation differs from direct raster read");
 
             verifyStepSix(geographicCenter);
+            require(
+                    demAssetMapper.findById(Long.MAX_VALUE) == null,
+                    "Missing DEM verification requires an unused ID");
+            expectError(
+                    ErrorCode.DEM_NOT_FOUND,
+                    () ->
+                            elevationService.extract(
+                                    Long.MAX_VALUE, geographicCenter[0], geographicCenter[1]));
+            DemManualVerification.run(demRasterReader, demAssetMapper.findById(demId));
 
             // 같은 Spring 서비스의 반복 호출에서도 Reader 자원을 공유하지 않는다.
             for (int attempt = 0; attempt < 5; attempt++) {
@@ -290,7 +300,7 @@ public class DemTiffVerificationRunner implements ApplicationRunner {
 
     private static void writeCrsFixture(Path path, boolean incomplete) throws Exception {
         BufferedImage image = new BufferedImage(2, 2, BufferedImage.TYPE_USHORT_GRAY);
-        ImageWriter writer = ImageIO.getImageWritersByFormatName("TIFF").next();
+        ImageWriter writer = DemManualVerification.newTiffWriter();
         try (ImageOutputStream output = ImageIO.createImageOutputStream(path.toFile())) {
             writer.setOutput(output);
             TIFFDirectory directory =
@@ -299,6 +309,7 @@ public class DemTiffVerificationRunner implements ApplicationRunner {
                                     ImageTypeSpecifier.createFromRenderedImage(image),
                                     writer.getDefaultWriteParam()));
             if (incomplete) {
+                directory.addTagSet(GeoTIFFTagSet.getInstance());
                 // 지리 좌표계 모델이지만 EPSG CRS 키 2048이 누락된 정의다.
                 char[] keys = {1, 1, 0, 2, 1024, 0, 1, 2, 1025, 0, 1, 1};
                 directory.addTIFFField(
