@@ -13,8 +13,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.sql.SQLException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -81,7 +83,17 @@ public class MountainService {
     public JsonNode getServiceAreaGeoJson(Long mountainId) {
         getMountain(mountainId);
 
-        List<ServiceAreaRow> serviceAreas = mountainMapper.findServiceAreas(mountainId);
+        List<ServiceAreaRow> serviceAreas;
+
+        try {
+            serviceAreas = mountainMapper.findServiceAreas(mountainId);
+        } catch (DataAccessException exception) {
+            if (isServiceAreaTransformFailure(exception)) {
+                throw new BusinessException(ErrorCode.SERVICE_AREA_UNAVAILABLE);
+            }
+
+            throw exception;
+        }
 
         if (serviceAreas.isEmpty()) {
             throw new BusinessException(ErrorCode.SERVICE_AREA_NOT_FOUND);
@@ -177,5 +189,25 @@ public class MountainService {
                 || minLat >= maxLat) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 BBOX 좌표입니다.");
         }
+    }
+
+    /*
+     * 서비스 영역 좌표 변환 과정에서 발생한 PostGIS 오류인지 확인
+     * 좌표 변환 오류가 아닌 연결 실패, SQL 문법 오류, 스키마 오류 등의 데이터베이스 예외는 서비스 영역 오류로 변환하지 않음
+     *
+     * @param exception 서비스 영역 조회 중 발생한 데이터 접근 예외
+     * @return PostGIS 좌표 변환 오류면 {@code true}, 그렇지 않으면 {@code false}
+     */
+    private boolean isServiceAreaTransformFailure(DataAccessException exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sql
+                    && "XX000".equals(sql.getSQLState())
+                    && sql.getMessage() != null
+                    && sql.getMessage().contains("transform:")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
