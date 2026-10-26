@@ -28,7 +28,14 @@ public enum ErrorCode {
     COURSE_PRECONDITION_REQUIRED(HttpStatus.PRECONDITION_REQUIRED, "If-Match 헤더가 필요합니다."),
     COURSE_AREA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "유효한 활성 서비스 영역을 확인할 수 없습니다."),
     COURSE_WORKSPACE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "시연 작업공간 계정 설정을 확인해주세요."),
-    COURSE_STATE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "코스 저장 상태를 확인해야 합니다.");
+    COURSE_STATE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "코스 저장 상태를 확인해야 합니다."),
+    DEM_DIRECTORY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "DEM 저장 디렉터리 설정을 확인해야 합니다."),
+    DEM_FILE_PATH_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일 경로 설정이 올바르지 않습니다."),
+    DEM_FILE_OUTSIDE_DIRECTORY(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일이 허용된 저장 범위 밖에 있습니다."),
+    DEM_FILE_NOT_FOUND(HttpStatus.SERVICE_UNAVAILABLE, "등록된 DEM 파일을 찾을 수 없습니다."),
+    DEM_FILE_NOT_REGULAR(HttpStatus.SERVICE_UNAVAILABLE, "등록된 DEM 경로가 일반 파일이 아닙니다."),
+    DEM_FILE_NOT_READABLE(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일을 읽을 수 없습니다."),
+    DEM_FILE_ACCESS_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일 접근 중 오류가 발생했습니다.");
 
     private final HttpStatus status;
     private final String message;
