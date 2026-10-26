@@ -14,7 +14,6 @@ public enum ErrorCode {
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 방식입니다."),
     NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "지원하지 않는 응답 형식입니다."),
     CONFLICT(HttpStatus.CONFLICT, "현재 상태와 요청이 충돌합니다."),
-    DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "이미 사용 중인 아이디입니다."),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 형식입니다."),
     UNPROCESSABLE_ENTITY(HttpStatus.UNPROCESSABLE_ENTITY, "요청을 처리할 수 없는 상태입니다."),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "요청이 많습니다. 잠시 후 다시 시도해주세요."),
@@ -23,16 +22,25 @@ public enum ErrorCode {
     PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "요청 본문이 너무 큽니다."),
     PRECONDITION_REQUIRED(HttpStatus.PRECONDITION_REQUIRED, "요청 조건이 필요합니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서비스를 사용할 수 없습니다."),
-    INVALID_COURSE_GEOMETRY(HttpStatus.BAD_REQUEST, "코스 형상과 좌표를 확인해주세요."),
-    COURSE_OUTSIDE_SERVICE_AREA(HttpStatus.BAD_REQUEST, "코스 전체가 해당 산의 서비스 영역 안에 있어야 합니다."),
-    COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다."),
+    
+    // User
+    DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "이미 사용 중인 아이디입니다."),
+    
+    // Mountain
     MOUNTAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "사용 가능한 산을 찾을 수 없습니다."),
     SERVICE_AREA_NOT_FOUND(HttpStatus.NOT_FOUND, "서비스 가능 영역을 찾을 수 없습니다."),
     SERVICE_AREA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "유효한 서비스 가능 영역을 확인할 수 없습니다."),
+    
+    // Course
+    INVALID_COURSE_GEOMETRY(HttpStatus.BAD_REQUEST, "코스 형상과 좌표를 확인해주세요."),
+    COURSE_OUTSIDE_SERVICE_AREA(HttpStatus.BAD_REQUEST, "코스 전체가 해당 산의 서비스 영역 안에 있어야 합니다."),
+    COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다."),
     COURSE_EDIT_CONFLICT(HttpStatus.PRECONDITION_FAILED, "코스가 변경되었습니다. 최신 내용을 다시 조회해주세요."),
     COURSE_PRECONDITION_REQUIRED(HttpStatus.PRECONDITION_REQUIRED, "If-Match 헤더가 필요합니다."),
     COURSE_AREA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "유효한 활성 서비스 영역을 확인할 수 없습니다."),
     COURSE_STATE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "코스 저장 상태를 확인해야 합니다."),
+    
+    // Route
     ROUTE_NODE_NOT_FOUND(HttpStatus.NOT_FOUND, "출발 또는 도착 지점을 찾을 수 없습니다."),
     ROUTE_SAME_POINT(HttpStatus.BAD_REQUEST, "출발 지점과 도착 지점이 같습니다."),
     ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "출발 지점과 도착 지점을 잇는 경로를 찾을 수 없습니다."),
