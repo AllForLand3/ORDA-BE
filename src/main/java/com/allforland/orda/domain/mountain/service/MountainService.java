@@ -1,6 +1,8 @@
 package com.allforland.orda.domain.mountain.service;
 
 import com.allforland.orda.common.dto.PageResponse;
+import com.allforland.orda.common.error.BusinessException;
+import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.mountain.dto.MountainDetailResponse;
 import com.allforland.orda.domain.mountain.dto.MountainListItem;
 import com.allforland.orda.domain.mountain.dto.MountainSearchRequest;
@@ -56,14 +58,14 @@ public class MountainService {
      *
      * @param mountainId 조회할 산 ID
      * @return 조회된 산의 상세 정보
-     * @throws ResponseStatusException 산 정보가 존재하지 않는 경우
+     * @throws BusinessException 활성 산 정보가 존재하지 않는 경우
      */
     public MountainDetailResponse getMountain(Long mountainId) {
 
         MountainDetailResponse mountain = mountainMapper.findById(mountainId);
 
         if (mountain == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "산 정보를 찾을 수 없습니다.");
+            throw new BusinessException(ErrorCode.MOUNTAIN_NOT_FOUND);
         }
 
         return mountain;
@@ -74,11 +76,16 @@ public class MountainService {
      *
      * @param mountainId 조회할 산 ID
      * @return 서비스 가능 영역 GeoJSON FeatureCollection
+     * @throws BusinessException 활성 산 또는 서비스 가능 영역이 존재하지 않는 경우
      */
     public JsonNode getServiceAreaGeoJson(Long mountainId) {
         getMountain(mountainId);
 
         List<ServiceAreaRow> serviceAreas = mountainMapper.findServiceAreas(mountainId);
+
+        if (serviceAreas.isEmpty()) {
+            throw new BusinessException(ErrorCode.SERVICE_AREA_NOT_FOUND);
+        }
 
         ObjectNode featureCollection = objectMapper.createObjectNode();
         featureCollection.put("type", "FeatureCollection");

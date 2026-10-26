@@ -27,6 +27,7 @@ public enum ErrorCode {
     COURSE_OUTSIDE_SERVICE_AREA(HttpStatus.BAD_REQUEST, "코스 전체가 해당 산의 서비스 영역 안에 있어야 합니다."),
     COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "코스를 찾을 수 없습니다."),
     MOUNTAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "사용 가능한 산을 찾을 수 없습니다."),
+    SERVICE_AREA_NOT_FOUND(HttpStatus.NOT_FOUND, "서비스 가능 영역을 찾을 수 없습니다."),
     COURSE_EDIT_CONFLICT(HttpStatus.PRECONDITION_FAILED, "코스가 변경되었습니다. 최신 내용을 다시 조회해주세요."),
     COURSE_PRECONDITION_REQUIRED(HttpStatus.PRECONDITION_REQUIRED, "If-Match 헤더가 필요합니다."),
     COURSE_AREA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "유효한 활성 서비스 영역을 확인할 수 없습니다."),

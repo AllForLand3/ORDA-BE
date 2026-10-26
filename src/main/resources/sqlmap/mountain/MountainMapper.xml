@@ -73,16 +73,16 @@
             m.mountain_nm,
             m.src_mntn_cd,
             m.src_old_mntn_cd,
-            TRUE AS service_available
+            EXISTS (
+                SELECT 1
+                FROM service_area sa
+                WHERE sa.mountain_id = m.mountain_id
+                  AND sa.use_yn = 'Y'
+                  AND sa.geom IS NOT NULL
+            ) AS service_available
         FROM mountain m
         WHERE m.mountain_id = #{mountainId}
           AND m.use_yn = 'Y'
-          AND EXISTS (
-              SELECT 1
-              FROM service_area sa
-              WHERE sa.mountain_id = m.mountain_id
-                AND sa.use_yn = 'Y'
-          )
     </select>
 	
 	<select id="findServiceAreas" resultMap="serviceAreaRowMap">
