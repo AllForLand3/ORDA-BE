@@ -15,6 +15,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 "api",
                 clazz ->
                         clazz.isAnnotationPresent(RestController.class)
+                                && clazz.getPackageName().startsWith("com.allforland.orda.domain.")
                                 && !ApiErrorController.class.isAssignableFrom(clazz));
     }
 }
