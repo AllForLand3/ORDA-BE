@@ -30,7 +30,11 @@ public enum ErrorCode {
     COURSE_EDIT_CONFLICT(HttpStatus.PRECONDITION_FAILED, "코스가 변경되었습니다. 최신 내용을 다시 조회해주세요."),
     COURSE_PRECONDITION_REQUIRED(HttpStatus.PRECONDITION_REQUIRED, "If-Match 헤더가 필요합니다."),
     COURSE_AREA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "유효한 활성 서비스 영역을 확인할 수 없습니다."),
-    COURSE_STATE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "코스 저장 상태를 확인해야 합니다.");
+    COURSE_STATE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "코스 저장 상태를 확인해야 합니다."),
+    ROUTE_NODE_NOT_FOUND(HttpStatus.NOT_FOUND, "출발 또는 도착 지점을 찾을 수 없습니다."),
+    ROUTE_SAME_POINT(HttpStatus.BAD_REQUEST, "출발 지점과 도착 지점이 같습니다."),
+    ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "출발 지점과 도착 지점을 잇는 경로를 찾을 수 없습니다."),
+    ROUTE_SNAP_FAILED(HttpStatus.NOT_FOUND, "선택한 위치 근처에서 경로 지점을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
