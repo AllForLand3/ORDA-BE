@@ -22,15 +22,15 @@ public enum ErrorCode {
     PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "요청 본문이 너무 큽니다."),
     PRECONDITION_REQUIRED(HttpStatus.PRECONDITION_REQUIRED, "요청 조건이 필요합니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서비스를 사용할 수 없습니다."),
-    
+
     // User
     DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "이미 사용 중인 아이디입니다."),
-    
+
     // Mountain
     MOUNTAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "사용 가능한 산을 찾을 수 없습니다."),
     SERVICE_AREA_NOT_FOUND(HttpStatus.NOT_FOUND, "서비스 가능 영역을 찾을 수 없습니다."),
     SERVICE_AREA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "유효한 서비스 가능 영역을 확인할 수 없습니다."),
-    
+
     // Course
     INVALID_COURSE_GEOMETRY(HttpStatus.BAD_REQUEST, "코스 형상과 좌표를 확인해주세요."),
     COURSE_OUTSIDE_SERVICE_AREA(HttpStatus.BAD_REQUEST, "코스 전체가 해당 산의 서비스 영역 안에 있어야 합니다."),
@@ -39,7 +39,7 @@ public enum ErrorCode {
     COURSE_PRECONDITION_REQUIRED(HttpStatus.PRECONDITION_REQUIRED, "If-Match 헤더가 필요합니다."),
     COURSE_AREA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "유효한 활성 서비스 영역을 확인할 수 없습니다."),
     COURSE_STATE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "코스 저장 상태를 확인해야 합니다."),
-    
+
     // Route
     ROUTE_NODE_NOT_FOUND(HttpStatus.NOT_FOUND, "출발 또는 도착 지점을 찾을 수 없습니다."),
     ROUTE_SAME_POINT(HttpStatus.BAD_REQUEST, "출발 지점과 도착 지점이 같습니다."),
