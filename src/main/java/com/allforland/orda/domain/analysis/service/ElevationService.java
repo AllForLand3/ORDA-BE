@@ -17,7 +17,10 @@ public class ElevationService {
     private final DemFileResolver demFileResolver;
     private final DemRasterReader demRasterReader;
 
-    /** EPSG:4326의 경도·위도에서 등록된 DEM의 고도를 판독한다. 파일 경로는 호출자가 지정하지 않고 DB에 등록된 값만 사용한다. */
+    /**
+     * 후속 분석에서 재사용하는 단일 좌표 판독 진입점이다. EPSG:4326의 경도·위도 순서이며 결과 고도는 m다. 파일 경로는 DB 등록값만 사용한다. 결측 상태와
+     * 파일·설정 오류 예외를 구분하며, Reader 자원은 호출 안에서 해제하고 결과에는 숫자와 상태만 반환한다.
+     */
     public ElevationResult extract(long demId, double longitude, double latitude) {
         validateCoordinates(longitude, latitude);
 

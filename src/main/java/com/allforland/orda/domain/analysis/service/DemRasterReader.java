@@ -12,12 +12,14 @@ import java.nio.file.Path;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import org.geotools.api.parameter.ParameterValue;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.MathTransform;
 import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.imageio.geotiff.GeoTiffIIOMetadataDecoder;
 import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.referencing.CRS;
@@ -47,7 +49,11 @@ public class DemRasterReader {
 
             GeoTiffIIOMetadataDecoder metadata = reader.getMetadata();
 
-            coverage = reader.read(null);
+            // 전체 TIFF를 즉시 디코딩하지 않고 요청한 타일을 지연 판독한다.
+            ParameterValue<Boolean> deferredRead =
+                    AbstractGridFormat.USE_IMAGEN_IMAGEREAD.createValue();
+            deferredRead.setValue(true);
+            coverage = reader.read(deferredRead);
 
             if (coverage == null) {
                 throw new BusinessException(ErrorCode.DEM_READ_FAILED);

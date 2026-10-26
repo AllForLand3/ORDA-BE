@@ -162,6 +162,20 @@ public class DemTiffVerificationRunner implements ApplicationRunner {
 
             verifyStepSix(geographicCenter);
 
+            // 같은 Spring 서비스의 반복 호출에서도 Reader 자원을 공유하지 않는다.
+            for (int attempt = 0; attempt < 5; attempt++) {
+                ElevationResult repeated =
+                        elevationService.extract(demId, geographicCenter[0], geographicCenter[1]);
+                require(
+                        repeated.status() == ElevationStatus.VALID && repeated.elevationM() != null,
+                        "Repeated extraction failed");
+                requireElevation(
+                        repeated.elevationM(),
+                        EXPECTED_ELEVATION,
+                        "Repeated elevation differs from GDAL");
+            }
+            LOG.info("DEM_SERVICE_REUSE_VERIFICATION PASSED: calls=5");
+
             LOG.info(
                     "DEM_TIFF_VERIFICATION PASSED: width={}, height={}, bands=1, "
                             + "crs=EPSG:4326, column={}, row={}, elevation={}, "
