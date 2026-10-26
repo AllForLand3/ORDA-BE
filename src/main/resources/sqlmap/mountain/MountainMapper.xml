@@ -23,6 +23,10 @@
 	    <result property="datasetId" column="dataset_id"/>
 	    <result property="areaName" column="area_nm"/>
 	    <result property="geometryJson" column="geometry_json"/>
+	    <result property="sourceSrid" column="source_srid"/>
+	    <result property="geometryType" column="geometry_type"/>
+	    <result property="geometryValid" column="geometry_valid"/>
+	    <result property="geometryEmpty" column="geometry_empty"/>
 	</resultMap>
 
     <sql id="mountainSearchCondition">
@@ -79,6 +83,10 @@
                 WHERE sa.mountain_id = m.mountain_id
                   AND sa.use_yn = 'Y'
                   AND sa.geom IS NOT NULL
+                  AND ST_SRID(sa.geom) = 5179
+                  AND ST_GeometryType(sa.geom) = 'ST_MultiPolygon'
+                  AND ST_IsValid(sa.geom)
+                  AND NOT ST_IsEmpty(sa.geom)
             ) AS service_available
         FROM mountain m
         WHERE m.mountain_id = #{mountainId}
@@ -91,16 +99,24 @@
 	        sa.mountain_id,
 	        sa.dataset_id,
 	        sa.area_nm,
-	        ST_AsGeoJSON(
-	            ST_Transform(sa.geom, 4326)
-	        ) AS geometry_json
+	        ST_SRID(sa.geom) AS source_srid,
+	        ST_GeometryType(sa.geom) AS geometry_type,
+	        ST_IsValid(sa.geom) AS geometry_valid,
+	        ST_IsEmpty(sa.geom) AS geometry_empty,
+	        CASE
+	            WHEN sa.geom IS NOT NULL
+	             AND ST_SRID(sa.geom) = 5179
+	             AND ST_GeometryType(sa.geom) = 'ST_MultiPolygon'
+	             AND ST_IsValid(sa.geom)
+	             AND NOT ST_IsEmpty(sa.geom)
+	            THEN ST_AsGeoJSON(ST_Transform(sa.geom, 4326))
+	        END AS geometry_json
 	    FROM service_area sa
 	    JOIN mountain m
 	      ON m.mountain_id = sa.mountain_id
 	    WHERE sa.mountain_id = #{mountainId}
 	      AND sa.use_yn = 'Y'
 	      AND m.use_yn = 'Y'
-	      AND sa.geom IS NOT NULL
 	    ORDER BY sa.area_id
 	</select>
 </mapper>

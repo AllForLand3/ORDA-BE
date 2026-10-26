@@ -93,6 +93,8 @@ public class MountainService {
         ArrayNode features = featureCollection.putArray("features");
 
         for (ServiceAreaRow serviceArea : serviceAreas) {
+            validateServiceAreaGeometry(serviceArea);
+
             try {
                 ObjectNode feature = objectMapper.createObjectNode();
 
@@ -113,6 +115,16 @@ public class MountainService {
         }
 
         return featureCollection;
+    }
+
+    private void validateServiceAreaGeometry(ServiceAreaRow serviceArea) {
+        if (!Integer.valueOf(5179).equals(serviceArea.getSourceSrid())
+                || !"ST_MultiPolygon".equals(serviceArea.getGeometryType())
+                || !Boolean.TRUE.equals(serviceArea.getGeometryValid())
+                || !Boolean.FALSE.equals(serviceArea.getGeometryEmpty())
+                || serviceArea.getGeometryJson() == null) {
+            throw new BusinessException(ErrorCode.SERVICE_AREA_UNAVAILABLE);
+        }
     }
 
     /*

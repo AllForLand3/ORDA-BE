@@ -11,4 +11,8 @@ public class ServiceAreaRow {
     private Long datasetId;
     private String areaName;
     private String geometryJson;
+    private Integer sourceSrid;
+    private String geometryType;
+    private Boolean geometryValid;
+    private Boolean geometryEmpty;
 }
