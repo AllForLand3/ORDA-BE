@@ -15,6 +15,15 @@
         <result property="sourceOldMountainCode" column="src_old_mntn_cd"/>
         <result property="serviceAvailable" column="service_available"/>
     </resultMap>
+    
+    <resultMap id="serviceAreaRowMap"
+	           type="com.allforland.orda.domain.mountain.dto.ServiceAreaRow">
+	    <id property="areaId" column="area_id"/>
+	    <result property="mountainId" column="mountain_id"/>
+	    <result property="datasetId" column="dataset_id"/>
+	    <result property="areaName" column="area_nm"/>
+	    <result property="geometryJson" column="geometry_json"/>
+	</resultMap>
 
     <sql id="mountainSearchCondition">
         WHERE m.use_yn = 'Y'
@@ -75,18 +84,23 @@
                 AND sa.use_yn = 'Y'
           )
     </select>
-    
-    <select id="findServiceAreaGeoJson" resultType="string">
+	
+	<select id="findServiceAreas" resultMap="serviceAreaRowMap">
 	    SELECT
+	        sa.area_id,
+	        sa.mountain_id,
+	        sa.dataset_id,
+	        sa.area_nm,
 	        ST_AsGeoJSON(
 	            ST_Transform(sa.geom, 4326)
-	        )
+	        ) AS geometry_json
 	    FROM service_area sa
 	    JOIN mountain m
-	        ON m.mountain_id = sa.mountain_id
+	      ON m.mountain_id = sa.mountain_id
 	    WHERE sa.mountain_id = #{mountainId}
 	      AND sa.use_yn = 'Y'
 	      AND m.use_yn = 'Y'
 	      AND sa.geom IS NOT NULL
+	    ORDER BY sa.area_id
 	</select>
 </mapper>

@@ -4,6 +4,7 @@ import com.allforland.orda.common.dto.PageResponse;
 import com.allforland.orda.domain.mountain.dto.MountainDetailResponse;
 import com.allforland.orda.domain.mountain.dto.MountainListItem;
 import com.allforland.orda.domain.mountain.dto.MountainSearchRequest;
+import com.allforland.orda.domain.mountain.dto.ServiceAreaRow;
 import com.allforland.orda.domain.mountain.mapper.MountainMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -77,22 +78,26 @@ public class MountainService {
     public JsonNode getServiceAreaGeoJson(Long mountainId) {
         getMountain(mountainId);
 
-        List<String> geometries = mountainMapper.findServiceAreaGeoJson(mountainId);
+        List<ServiceAreaRow> serviceAreas = mountainMapper.findServiceAreas(mountainId);
 
         ObjectNode featureCollection = objectMapper.createObjectNode();
         featureCollection.put("type", "FeatureCollection");
 
         ArrayNode features = featureCollection.putArray("features");
 
-        for (String geometry : geometries) {
+        for (ServiceAreaRow serviceArea : serviceAreas) {
             try {
                 ObjectNode feature = objectMapper.createObjectNode();
-                feature.put("type", "Feature");
 
-                feature.set("geometry", objectMapper.readTree(geometry));
+                feature.put("type", "Feature");
+                feature.put("id", serviceArea.getAreaId());
+                feature.set("geometry", objectMapper.readTree(serviceArea.getGeometryJson()));
 
                 ObjectNode properties = feature.putObject("properties");
-                properties.put("mountainId", mountainId);
+                properties.put("areaId", serviceArea.getAreaId());
+                properties.put("areaName", serviceArea.getAreaName());
+                properties.put("mountainId", serviceArea.getMountainId());
+                properties.put("datasetId", serviceArea.getDatasetId());
 
                 features.add(feature);
             } catch (JsonProcessingException e) {
