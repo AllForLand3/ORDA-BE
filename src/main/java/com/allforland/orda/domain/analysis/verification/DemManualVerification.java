@@ -16,6 +16,8 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferFloat;
 import java.awt.image.PixelInterleavedSampleModel;
 import java.awt.image.Raster;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -177,12 +179,29 @@ final class DemManualVerification {
                             + "nanNoData=PASS, invalidPixels=PASS, boundaries=PASS, swappedAxes=PASS, "
                             + "missingDem=PASS, demStates=PASS, missingFile=PASS, permissions=PASS, format=PASS");
         } finally {
-            try (var children = Files.list(folder)) {
-                for (Path child : children.toList()) {
-                    Files.deleteIfExists(child);
-                }
+            cleanupTemporaryDirectory(folder);
+        }
+    }
+
+    /** 한 항목의 정리 실패가 나머지 정리나 원래 검증 예외를 덮어쓰지 않도록 한다. */
+    private static void cleanupTemporaryDirectory(Path folder) {
+        try (var children = Files.list(folder)) {
+            for (Path child : children.toList()) {
+                deleteTemporaryPath(child);
             }
-            Files.deleteIfExists(folder);
+        } catch (IOException | UncheckedIOException | SecurityException exception) {
+            LOG.warn("DEM 검증 임시 파일 목록을 확인하지 못했습니다.");
+        } finally {
+            deleteTemporaryPath(folder);
+        }
+    }
+
+    /** 삭제 실패를 기록하고 다음 임시 자원의 정리를 계속한다. 내부 경로는 기록하지 않는다. */
+    private static void deleteTemporaryPath(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException | SecurityException exception) {
+            LOG.warn("DEM 검증 임시 자원을 삭제하지 못했습니다.");
         }
     }
 

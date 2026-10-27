@@ -52,6 +52,7 @@ public class ElevationService {
         }
     }
 
+    /** RAW·READY 모두 허용하되 이후 경로·내부 CRS·밴드·NoData 검증을 통과해야 판독한다. */
     private void validateAvailability(DemAssetRow dem) {
         if (!"Y".equals(dem.useYn())) {
             throw new BusinessException(ErrorCode.DEM_UNAVAILABLE);
