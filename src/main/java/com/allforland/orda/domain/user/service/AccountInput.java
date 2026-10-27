@@ -15,6 +15,18 @@ public final class AccountInput {
         return value;
     }
 
+    public static String loginIdForLogin(String value) {
+        if (value == null) {
+            throw invalid();
+        }
+
+        if (!value.matches("[A-Za-z0-9][A-Za-z0-9._-]{2,49}")) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        return value;
+    }
+
     public static String userName(String value) {
         text(value);
         String name = value.strip();
