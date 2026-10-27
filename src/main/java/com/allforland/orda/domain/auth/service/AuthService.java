@@ -44,7 +44,7 @@ public class AuthService {
         if (request == null) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
-        String loginId = AccountInput.loginId(request.getLoginId());
+        String loginId = AccountInput.loginIdForLogin(request.getLoginId());
         String password = AccountInput.loginPassword(request.getPassword());
         UserAccount user = users.findByLoginId(loginId);
         boolean eligible = user != null && user.authenticatable();
