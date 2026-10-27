@@ -34,7 +34,23 @@ public enum ErrorCode {
     ROUTE_NODE_NOT_FOUND(HttpStatus.NOT_FOUND, "출발 또는 도착 지점을 찾을 수 없습니다."),
     ROUTE_SAME_POINT(HttpStatus.BAD_REQUEST, "출발 지점과 도착 지점이 같습니다."),
     ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "출발 지점과 도착 지점을 잇는 경로를 찾을 수 없습니다."),
-    ROUTE_SNAP_FAILED(HttpStatus.NOT_FOUND, "선택한 위치 근처에서 경로 지점을 찾을 수 없습니다.");
+    ROUTE_SNAP_FAILED(HttpStatus.NOT_FOUND, "선택한 위치 근처에서 경로 지점을 찾을 수 없습니다."),
+
+    DEM_DIRECTORY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "DEM 저장 디렉터리 설정을 확인해야 합니다."),
+    DEM_FILE_PATH_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일 경로 설정이 올바르지 않습니다."),
+    DEM_FILE_OUTSIDE_DIRECTORY(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일이 허용된 저장 범위 밖에 있습니다."),
+    DEM_FILE_NOT_FOUND(HttpStatus.SERVICE_UNAVAILABLE, "등록된 DEM 파일을 찾을 수 없습니다."),
+    DEM_FILE_NOT_REGULAR(HttpStatus.SERVICE_UNAVAILABLE, "등록된 DEM 경로가 일반 파일이 아닙니다."),
+    DEM_FILE_NOT_READABLE(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일을 읽을 수 없습니다."),
+    DEM_FILE_ACCESS_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일 접근 중 오류가 발생했습니다."),
+    DEM_INVALID_COORDINATE(HttpStatus.BAD_REQUEST, "경도와 위도 범위를 확인해주세요."),
+    DEM_NOT_FOUND(HttpStatus.NOT_FOUND, "DEM 자료를 찾을 수 없습니다."),
+    DEM_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "사용 가능한 DEM 자료가 아닙니다."),
+    DEM_CRS_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "DEM 좌표계 정보를 확인해야 합니다."),
+    DEM_CRS_MISMATCH(HttpStatus.SERVICE_UNAVAILABLE, "등록된 좌표계와 DEM 파일의 좌표계가 다릅니다."),
+    DEM_METADATA_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "DEM 메타데이터를 확인해야 합니다."),
+    DEM_TRANSFORM_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "DEM 좌표 변환에 실패했습니다."),
+    DEM_READ_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일을 판독하지 못했습니다.");
 
     private final HttpStatus status;
     private final String message;

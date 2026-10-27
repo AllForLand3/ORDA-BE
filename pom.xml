@@ -19,6 +19,7 @@
     <egovframe.version>4.1.0</egovframe.version>
     <mybatis-spring-boot.version>2.3.2</mybatis-spring-boot.version>
     <springdoc.version>1.8.0</springdoc.version>
+    <geotools.version>34.6</geotools.version>
   </properties>
   <repositories>
     <repository>
@@ -31,8 +32,34 @@
         <enabled>false</enabled>
       </snapshots>
     </repository>
+    <repository>
+      <id>osgeo-release</id>
+      <url>https://repo.osgeo.org/repository/release/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
   </repositories>
   <dependencies>
+    <!-- GeoTIFF reading, coordinate transformations and EPSG definitions. -->
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-geotiff</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-referencing</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-epsg-hsql</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-crypto</artifactId>
