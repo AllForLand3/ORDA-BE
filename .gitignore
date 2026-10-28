@@ -47,6 +47,3 @@ application-local.yml
 
 # Eclipse build output
 bin/
-
-# Local Docker configuration
-/docker-compose.local.yaml

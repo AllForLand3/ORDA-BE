@@ -10,7 +10,6 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -36,35 +35,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         HttpServletRequest servletRequest = ((ServletWebRequest) request).getRequest();
         if (status.is5xxServerError()) {
             LOG.error(
-                    "Request failed: traceId={}, type={}",
+                    "Request failed: traceId={}",
                     TraceIdFilter.getOrCreateTraceId(servletRequest),
-                    exception.getClass().getSimpleName());
+                    exception);
         }
         return new ResponseEntity<>(
                 response(status, ErrorCode.fromStatus(status), details(exception), servletRequest),
                 headers,
                 status);
-    }
-
-    @Override
-    protected ResponseEntity<Object> handleHttpMessageNotReadable(
-            HttpMessageNotReadableException exception,
-            HttpHeaders headers,
-            HttpStatus status,
-            WebRequest request) {
-        Throwable cause = exception;
-        while (cause != null) {
-            if (cause instanceof BusinessException business
-                    && business.getErrorCode() == ErrorCode.INVALID_COURSE_GEOMETRY) {
-                HttpServletRequest servletRequest = ((ServletWebRequest) request).getRequest();
-                return new ResponseEntity<>(
-                        response(status, business.getErrorCode(), List.of(), servletRequest),
-                        headers,
-                        status);
-            }
-            cause = cause.getCause();
-        }
-        return handleExceptionInternal(exception, null, headers, status, request);
     }
 
     @ExceptionHandler(BusinessException.class)
@@ -89,9 +67,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         int status = exception.getRawStatusCode();
         if (status >= 500) {
             LOG.error(
-                    "Request failed: traceId={}, type={}",
+                    "Request failed: traceId={}",
                     TraceIdFilter.getOrCreateTraceId(request),
-                    exception.getClass().getSimpleName());
+                    exception);
         }
         return ResponseEntity.status(status)
                 .headers(exception.getResponseHeaders())
@@ -108,17 +86,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatus status = responseStatus.code();
             if (status.is5xxServerError()) {
                 LOG.error(
-                        "Request failed: traceId={}, type={}",
+                        "Request failed: traceId={}",
                         TraceIdFilter.getOrCreateTraceId(request),
-                        exception.getClass().getSimpleName());
+                        exception);
             }
             return ResponseEntity.status(status)
                     .body(response(status, ErrorCode.fromStatus(status), List.of(), request));
         }
         LOG.error(
-                "Request failed: traceId={}, type={}",
-                TraceIdFilter.getOrCreateTraceId(request),
-                exception.getClass().getSimpleName());
+                "Request failed: traceId={}", TraceIdFilter.getOrCreateTraceId(request), exception);
         ErrorCode code = ErrorCode.INTERNAL_SERVER_ERROR;
         return ResponseEntity.status(code.getStatus())
                 .body(response(code.getStatus(), code, List.of(), request));

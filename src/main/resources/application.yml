@@ -28,18 +28,6 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
-orda:
-  dem:
-    base-directory: ${ORDA_DEM_BASE_DIRECTORY:}
-  auth:
-    cors:
-      allowed-origins: ${ORDA_AUTH_CORS_ALLOWED_ORIGINS:}
-    jwt:
-      secret-base64: ${ORDA_AUTH_JWT_SECRET_BASE64:}
-      access-token-seconds: ${ORDA_AUTH_JWT_ACCESS_TOKEN_SECONDS:3600}
-  route:
-    # 스냅 허용 거리 기준 확정 전 임시 값
-    snap-max-distance-m: ${ORDA_ROUTE_SNAP_MAX_DISTANCE_M:300}
 server:
   error:
     include-message: never
