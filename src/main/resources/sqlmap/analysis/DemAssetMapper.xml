@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.allforland.orda.domain.analysis.mapper.DemAssetMapper">
+  <resultMap id="demAssetResult" type="com.allforland.orda.domain.analysis.vo.DemAssetRow">
+    <constructor>
+      <idArg column="dem_id" javaType="java.lang.Long"/>
+      <arg column="dataset_id" javaType="java.lang.Long"/>
+      <arg column="dem_nm" javaType="java.lang.String"/>
+      <arg column="file_path" javaType="java.lang.String"/>
+      <arg column="crs_cd" javaType="java.lang.String"/>
+      <arg column="res_m" javaType="java.math.BigDecimal"/>
+      <arg column="surface_type_cd" javaType="java.lang.String"/>
+      <arg column="nodata_val" javaType="java.math.BigDecimal"/>
+      <arg column="prep_status_cd" javaType="java.lang.String"/>
+      <arg column="use_yn" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+
+  <select id="findById" resultMap="demAssetResult">
+    SELECT dem_id, dataset_id, dem_nm, file_path, crs_cd, res_m,
+           surface_type_cd, nodata_val, prep_status_cd, use_yn
+    FROM public.dem_asset
+    WHERE dem_id = #{demId}
+  </select>
+</mapper>

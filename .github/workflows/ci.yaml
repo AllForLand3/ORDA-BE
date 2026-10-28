@@ -112,6 +112,14 @@ jobs:
             exit 0
           fi
 
+          if ! git cat-file -e "${compare_ref}^{commit}" 2>/dev/null; then
+            echo "Fetching comparison commit $compare_ref."
+            if ! git fetch --no-tags origin "$compare_ref"; then
+              echo "::error::Unable to fetch comparison commit $compare_ref; migration immutability was not checked."
+              exit 1
+            fi
+          fi
+
           violations="$(
             git diff --name-status --no-renames \
               "$compare_ref" HEAD -- \
