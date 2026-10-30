@@ -358,6 +358,7 @@ public class TerrainAnalysisTransactionService {
 
         requireResult(
                 validCount > 0
+                        && validSegmentCount > 0
                         && profile.validSampleCount() == validCount
                         && profile.missingSampleCount() == count - validCount
                         && profile.validSegmentCount() == validSegmentCount);

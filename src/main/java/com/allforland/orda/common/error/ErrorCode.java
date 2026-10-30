@@ -56,7 +56,9 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST, "샘플 간격은 5~100m이며 소수점 첫째 자리까지 입력할 수 있습니다."),
     ANALYSIS_SAMPLE_LIMIT_EXCEEDED(
             HttpStatus.BAD_REQUEST, "분석 샘플은 시작점과 끝점을 포함해 최대 2,000개까지 허용됩니다."),
-    ANALYSIS_NO_VALID_ELEVATION(HttpStatus.UNPROCESSABLE_ENTITY, "코스에서 유효한 고도를 추출할 수 없습니다.");
+    ANALYSIS_NO_VALID_ELEVATION(HttpStatus.UNPROCESSABLE_ENTITY, "코스에서 유효한 고도를 추출할 수 없습니다."),
+    ANALYSIS_INSUFFICIENT_VALID_SEGMENTS(
+            HttpStatus.UNPROCESSABLE_ENTITY, "유효한 인접 고도 샘플이 없어 통계를 산출할 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;

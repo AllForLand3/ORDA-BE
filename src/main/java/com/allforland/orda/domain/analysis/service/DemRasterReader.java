@@ -38,13 +38,19 @@ public class DemRasterReader {
 
         GeoTiffReader reader = null;
         GridCoverage2D coverage = null;
+        ImageInputStream rasterInput = null;
 
         try {
             // GeoTools가 기본 CRS를 선택하거나 생성 단계에서 실패하기 전에 내부 키를 검사한다.
             CoordinateReferenceSystem declaredCrs = readInternalCrs(file);
+            // 지연 판독에서 생성되는 파일 스트림의 수명을 호출 범위로 제한한다.
+            rasterInput = ImageIO.createImageInputStream(file.toFile());
+            if (rasterInput == null) {
+                throw new BusinessException(ErrorCode.DEM_READ_FAILED);
+            }
             reader =
                     new GeoTiffReader(
-                            file.toFile(),
+                            rasterInput,
                             new Hints(Hints.FORCE_LONGITUDE_FIRST_AXIS_ORDER, Boolean.TRUE));
 
             GeoTiffIIOMetadataDecoder metadata = reader.getMetadata();
@@ -125,6 +131,13 @@ public class DemRasterReader {
             throw new BusinessException(ErrorCode.DEM_READ_FAILED);
         } finally {
             release(coverage, reader);
+            if (rasterInput != null) {
+                try {
+                    rasterInput.close();
+                } catch (IOException exception) {
+                    LOG.warn("DEM 입력 스트림 자원 해제에 실패했습니다.");
+                }
+            }
         }
     }
 

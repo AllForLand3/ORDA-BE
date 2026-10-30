@@ -92,6 +92,10 @@ public class CourseElevationProfileService {
             throw new BusinessException(ErrorCode.ANALYSIS_NO_VALID_ELEVATION);
         }
 
+        if (validSegmentCount == 0) {
+            throw new BusinessException(ErrorCode.ANALYSIS_INSUFFICIENT_VALID_SEGMENTS);
+        }
+
         return new CourseElevationProfile(
                 sampling.courseId(),
                 sampling.revNo(),
