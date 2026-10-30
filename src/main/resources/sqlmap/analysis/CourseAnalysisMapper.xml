@@ -47,4 +47,39 @@
     FROM source
   </select>
 
+  <resultMap id="courseSamplePointResult"
+             type="com.allforland.orda.domain.analysis.vo.CourseSamplePoint">
+    <constructor>
+      <idArg column="seq_no" javaType="_int"/>
+      <arg column="distance_m" javaType="_double"/>
+      <arg column="longitude" javaType="_double"/>
+      <arg column="latitude" javaType="_double"/>
+    </constructor>
+  </resultMap>
+
+  <!-- 코스를 재조회하지 않고 소유권을 확인한 시점의 형상만 사용한다. -->
+  <select id="generateSamplePoints" resultMap="courseSamplePointResult" useCache="false">
+    WITH shape AS (
+      SELECT ST_GeomFromEWKB(decode(#{geometryHex}, 'hex')) AS geom
+    ), source AS (
+      SELECT geom, ST_Length(geom) AS length_m FROM shape
+    ), distances(seq_no, distance_m) AS (
+      VALUES
+      <foreach collection="distances" item="distance" index="index" separator=",">
+        (CAST(#{index} AS integer) + 1, CAST(#{distance} AS double precision))
+      </foreach>
+    ), points AS (
+      SELECT d.seq_no, d.distance_m,
+             ST_Transform(
+               CASE WHEN d.seq_no = 1 THEN ST_StartPoint(s.geom)
+                    WHEN d.seq_no = (SELECT MAX(seq_no) FROM distances) THEN ST_EndPoint(s.geom)
+                    ELSE ST_LineInterpolatePoint(s.geom, d.distance_m / s.length_m)
+               END, 4326
+             ) AS geom
+      FROM source s CROSS JOIN distances d
+    )
+    SELECT seq_no, distance_m, ST_X(geom) AS longitude, ST_Y(geom) AS latitude
+    FROM points
+    ORDER BY seq_no
+  </select>
 </mapper>
