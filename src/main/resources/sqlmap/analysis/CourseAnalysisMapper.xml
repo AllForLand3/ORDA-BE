@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.allforland.orda.domain.analysis.mapper.CourseAnalysisMapper">
+
+  <resultMap id="courseAnalysisSourceResult"
+             type="com.allforland.orda.domain.analysis.vo.CourseAnalysisSourceRow">
+    <constructor>
+      <idArg column="course_id" javaType="java.lang.Long"/>
+      <arg column="rev_no" javaType="java.lang.Integer"/>
+      <arg column="geometry_hex" javaType="java.lang.String"/>
+      <arg column="actual_length_m" javaType="java.lang.Double"/>
+      <arg column="geometry_valid" javaType="java.lang.Boolean"/>
+    </constructor>
+  </resultMap>
+
+  <select id="findSource"
+          resultMap="courseAnalysisSourceResult"
+          useCache="false">
+    WITH source AS (
+    SELECT c.course_id,
+    c.rev_no,
+    c.geom,
+    COALESCE(
+    ST_SRID(c.geom) = 5179
+    AND GeometryType(c.geom) = 'LINESTRING'
+    AND ST_NDims(c.geom) = 2
+    AND NOT ST_IsEmpty(c.geom)
+    AND ST_IsValid(c.geom),
+    false
+    ) AS geometry_valid
+    FROM public.course c
+    WHERE c.course_id = #{courseId}
+    AND c.owner_user_id = #{ownerUserId}
+    AND c.del_yn = 'N'
+    )
+    SELECT course_id,
+    rev_no,
+    CASE WHEN geometry_valid
+    THEN encode(ST_AsEWKB(geom), 'hex')
+    END AS geometry_hex,
+    CASE WHEN geometry_valid
+    THEN ST_Length(geom)
+    END AS actual_length_m,
+    geometry_valid
+    FROM source
+  </select>
+
+</mapper>
