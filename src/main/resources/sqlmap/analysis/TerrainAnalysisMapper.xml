@@ -3,11 +3,11 @@
   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
   "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.allforland.orda.domain.analysis.mapper.TerrainAnalysisMapper">
+<mapper namespace="com.allforland.orda.domain.analysis.terrain.mapper.TerrainAnalysisMapper">
 
   <resultMap
     id="terrainAnalysisResult"
-    type="com.allforland.orda.domain.analysis.vo.TerrainAnalysisRow">
+    type="com.allforland.orda.domain.analysis.terrain.vo.TerrainAnalysisRow">
     <constructor>
       <idArg column="analysis_id" javaType="java.lang.Long"/>
       <arg column="course_id" javaType="java.lang.Long"/>
