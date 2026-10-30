@@ -10,6 +10,7 @@ import com.allforland.orda.domain.analysis.vo.DemAssetRow;
 import com.allforland.orda.domain.analysis.vo.ElevationSampleSaveRow;
 import com.allforland.orda.domain.analysis.vo.ElevationStatus;
 import com.allforland.orda.domain.analysis.vo.PreparedTerrainAnalysis;
+import com.allforland.orda.domain.analysis.vo.TerrainAnalysisPreparation;
 import com.allforland.orda.domain.analysis.vo.TerrainAnalysisRow;
 import com.allforland.orda.domain.analysis.vo.TerrainAnalysisSummarySaveRow;
 import com.allforland.orda.domain.auth.service.AuthService;
@@ -38,12 +39,12 @@ public class TerrainAnalysisTransactionService {
     private final DemAssetMapper demMapper;
     private final TerrainAnalysisMapper analysisMapper;
 
-    /** 코스 스냅샷을 확보하고 신규 분석의 실행 권한을 얻는다. TIFF는 읽지 않는다. */
+    /** 코스 스냅샷을 확보하고 신규 분석을 시작하거나 기존 분석을 반환한다. TIFF는 읽지 않는다. */
     @Transactional(
             propagation = Propagation.REQUIRES_NEW,
             isolation = Isolation.READ_COMMITTED,
             rollbackFor = Exception.class)
-    public PreparedTerrainAnalysis prepareAndStart(
+    public TerrainAnalysisPreparation prepareAndStart(
             long courseId, int expectedRevNo, long demId, BigDecimal requestedIntervalM) {
         if (courseId <= 0 || expectedRevNo <= 0 || demId <= 0) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
@@ -71,18 +72,90 @@ public class TerrainAnalysisTransactionService {
                         sampling.courseId(), sampling.revNo(), demId, sampling.sampleIntervalM());
 
         if (analysisId == null) {
-            // 동일 조건의 재사용·재시도 정책은 후속 단계에서 연결한다.
-            throw new BusinessException(ErrorCode.CONFLICT);
+            TerrainAnalysisRow existing =
+                    analysisMapper.findByCondition(
+                            sampling.courseId(),
+                            sampling.revNo(),
+                            demId,
+                            sampling.sampleIntervalM());
+
+            if (existing == null) {
+                throw new BusinessException(ErrorCode.CONFLICT);
+            }
+
+            TerrainAnalysisRow locked = analysisMapper.findByIdForUpdate(existing.analysisId());
+
+            if (locked == null) {
+                throw new BusinessException(ErrorCode.CONFLICT);
+            }
+
+            // 잠금을 얻은 뒤 읽은 상태로 재사용 여부를 판단한다.
+            String status = locked.statusCode();
+
+            if ("DONE".equals(status) || "REQUESTED".equals(status) || "RUNNING".equals(status)) {
+                return TerrainAnalysisPreparation.reuse(locked.analysisId());
+            }
+
+            if (!"FAILED".equals(status)) {
+                throw new BusinessException(ErrorCode.CONFLICT);
+            }
+
+            analysisId = locked.analysisId();
+            analysisMapper.deleteFailedSamples(analysisId);
+
+            if (analysisMapper.resetFailedForRetry(analysisId) != 1) {
+                throw new BusinessException(ErrorCode.CONFLICT);
+            }
         }
 
         if (analysisMapper.markRunning(analysisId) != 1) {
             throw new BusinessException(ErrorCode.CONFLICT);
         }
 
-        return new PreparedTerrainAnalysis(analysisId, ownerUserId, demId, sampling);
+        PreparedTerrainAnalysis prepared =
+                new PreparedTerrainAnalysis(analysisId, ownerUserId, demId, sampling);
+
+        return TerrainAnalysisPreparation.execute(prepared);
     }
 
-    /** 샘플·요약 통계·완료 상태를 하나의 트랜잭션으로 저장한다. */
+    /** 현재 버전의 분석을 조회한다. 분석이 없거나 코스 접근이 불가능하면 404로 처리한다. */
+    @Transactional(readOnly = true)
+    public TerrainAnalysisRow findCurrent(
+            long courseId, long demId, BigDecimal requestedIntervalM) {
+        if (courseId <= 0 || demId <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        long ownerUserId = authService.requireCurrentUser().userId();
+        BigDecimal interval = distanceGenerator.normalizeInterval(requestedIntervalM);
+        TerrainAnalysisRow row =
+                analysisMapper.findCurrentOwned(courseId, ownerUserId, demId, interval);
+
+        if (row == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        return row;
+    }
+
+    /** ID로 분석을 조회할 때도 현재 코스 소유권과 삭제 여부를 확인한다. */
+    @Transactional(readOnly = true)
+    public TerrainAnalysisRow findOwned(long analysisId) {
+        if (analysisId <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        long ownerUserId = authService.requireCurrentUser().userId();
+        TerrainAnalysisRow row = analysisMapper.findOwnedById(analysisId, ownerUserId);
+
+        if (row == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        return row;
+    }
+
+    /** 준비 시점 버전의 샘플·요약 통계·완료 상태를 함께 저장한다. 현재 버전으로 변경하지 않는다. */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void complete(PreparedTerrainAnalysis prepared, CourseElevationProfile profile) {
         validatePreparedOwner(prepared);

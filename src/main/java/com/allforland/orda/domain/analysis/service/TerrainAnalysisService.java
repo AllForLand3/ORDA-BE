@@ -2,6 +2,7 @@ package com.allforland.orda.domain.analysis.service;
 
 import com.allforland.orda.domain.analysis.vo.CourseElevationProfile;
 import com.allforland.orda.domain.analysis.vo.PreparedTerrainAnalysis;
+import com.allforland.orda.domain.analysis.vo.TerrainAnalysisPreparation;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -20,13 +21,19 @@ public class TerrainAnalysisService {
     private final TerrainAnalysisTransactionService transactionService;
     private final CourseElevationProfileService profileService;
 
-    /** 분석을 동기 실행하고 결과 저장까지 성공한 분석 ID를 반환한다. */
+    /** 신규 분석을 동기 실행하거나 기존 분석 ID를 반환한다. */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public long analyze(
             long courseId, int expectedRevNo, long demId, BigDecimal requestedIntervalM) {
-        PreparedTerrainAnalysis prepared =
+        TerrainAnalysisPreparation preparation =
                 transactionService.prepareAndStart(
                         courseId, expectedRevNo, demId, requestedIntervalM);
+
+        if (!preparation.shouldExecute()) {
+            return preparation.analysisId();
+        }
+
+        PreparedTerrainAnalysis prepared = preparation.prepared();
 
         try {
             CourseElevationProfile profile =

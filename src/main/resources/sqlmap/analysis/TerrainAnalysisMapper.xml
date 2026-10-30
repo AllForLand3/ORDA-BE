@@ -80,11 +80,59 @@
     FOR UPDATE
   </select>
 
+  <select id="findCurrentOwned" resultMap="terrainAnalysisResult"
+          useCache="false" flushCache="true">
+    SELECT a.analysis_id, a.course_id, a.rev_no, a.dem_id, a.sample_itv_m, a.status_cd
+    FROM terrain_analysis a
+    JOIN course c ON c.course_id = a.course_id AND c.rev_no = a.rev_no
+    WHERE c.course_id = #{courseId}
+    AND c.owner_user_id = #{ownerUserId}
+    AND c.del_yn = 'N'
+    AND a.dem_id = #{demId}
+    AND a.sample_itv_m = #{sampleIntervalM}
+  </select>
+
+  <select id="findOwnedById" resultMap="terrainAnalysisResult"
+          useCache="false" flushCache="true">
+    SELECT a.analysis_id, a.course_id, a.rev_no, a.dem_id, a.sample_itv_m, a.status_cd
+    FROM terrain_analysis a
+    JOIN course c ON c.course_id = a.course_id
+    WHERE a.analysis_id = #{analysisId}
+    AND c.owner_user_id = #{ownerUserId}
+    AND c.del_yn = 'N'
+  </select>
+
   <update id="markRunning">
     UPDATE terrain_analysis
     SET status_cd = 'RUNNING'
     WHERE analysis_id = #{analysisId}
     AND status_cd = 'REQUESTED'
+  </update>
+
+  <delete id="deleteFailedSamples">
+    DELETE FROM elevation_sample
+    WHERE analysis_id = #{analysisId}
+    AND EXISTS (
+    SELECT 1 FROM terrain_analysis
+    WHERE analysis_id = #{analysisId}
+    AND status_cd = 'FAILED'
+    )
+  </delete>
+
+  <update id="resetFailedForRetry">
+    UPDATE terrain_analysis
+    SET
+    status_cd = 'REQUESTED',
+    ascent_m = NULL,
+    descent_m = NULL,
+    max_elev_m = NULL,
+    min_elev_m = NULL,
+    sample_cnt = NULL,
+    missing_cnt = NULL,
+    err_msg = NULL,
+    done_dt = NULL
+    WHERE analysis_id = #{analysisId}
+    AND status_cd = 'FAILED'
   </update>
 
   <insert id="insertSamples">
