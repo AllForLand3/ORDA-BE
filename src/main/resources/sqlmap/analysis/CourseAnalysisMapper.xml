@@ -82,4 +82,17 @@
     FROM points
     ORDER BY seq_no
   </select>
+
+  <select id="lockOwnedCourse"
+          resultType="java.lang.Long"
+          useCache="false"
+          flushCache="true">
+    SELECT course_id
+    FROM public.course
+    WHERE course_id = #{courseId}
+    AND owner_user_id = #{ownerUserId}
+    AND del_yn = 'N'
+    FOR SHARE
+  </select>
+
 </mapper>

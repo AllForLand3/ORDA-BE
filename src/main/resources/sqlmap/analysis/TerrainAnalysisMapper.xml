@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.allforland.orda.domain.analysis.mapper.TerrainAnalysisMapper">
+
+  <resultMap
+    id="terrainAnalysisResult"
+    type="com.allforland.orda.domain.analysis.vo.TerrainAnalysisRow">
+    <constructor>
+      <idArg column="analysis_id" javaType="java.lang.Long"/>
+      <arg column="course_id" javaType="java.lang.Long"/>
+      <arg column="rev_no" javaType="java.lang.Integer"/>
+      <arg column="dem_id" javaType="java.lang.Long"/>
+      <arg column="sample_itv_m" javaType="java.math.BigDecimal"/>
+      <arg column="status_cd" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+
+  <!-- INSERT RETURNING이므로 데이터를 변경하는 select로 선언한다. -->
+  <select
+    id="insertRequested"
+    resultType="java.lang.Long"
+    affectData="true"
+    flushCache="true"
+    useCache="false">
+    INSERT INTO terrain_analysis (
+    course_id,
+    rev_no,
+    dem_id,
+    sample_itv_m,
+    status_cd
+    )
+    VALUES (
+    #{courseId},
+    #{revNo},
+    #{demId},
+    #{sampleIntervalM},
+    'REQUESTED'
+    )
+    ON CONFLICT (course_id, rev_no, dem_id, sample_itv_m)
+    DO NOTHING
+    RETURNING analysis_id
+  </select>
+
+  <select
+    id="findByCondition"
+    resultMap="terrainAnalysisResult"
+    useCache="false"
+    flushCache="true">
+    SELECT
+    analysis_id,
+    course_id,
+    rev_no,
+    dem_id,
+    sample_itv_m,
+    status_cd
+    FROM terrain_analysis
+    WHERE course_id = #{courseId}
+    AND rev_no = #{revNo}
+    AND dem_id = #{demId}
+    AND sample_itv_m = #{sampleIntervalM}
+  </select>
+
+  <select
+    id="findByIdForUpdate"
+    resultMap="terrainAnalysisResult"
+    useCache="false"
+    flushCache="true">
+    SELECT
+    analysis_id,
+    course_id,
+    rev_no,
+    dem_id,
+    sample_itv_m,
+    status_cd
+    FROM terrain_analysis
+    WHERE analysis_id = #{analysisId}
+    FOR UPDATE
+  </select>
+
+  <update id="markRunning">
+    UPDATE terrain_analysis
+    SET status_cd = 'RUNNING'
+    WHERE analysis_id = #{analysisId}
+    AND status_cd = 'REQUESTED'
+  </update>
+
+  <insert id="insertSamples">
+    INSERT INTO elevation_sample (
+    analysis_id,
+    seq_no,
+    dist_m,
+    elev_m
+    )
+    VALUES
+    <foreach collection="samples" item="sample" separator=",">
+      (
+      #{analysisId},
+      #{sample.seqNo},
+      #{sample.distanceM,jdbcType=NUMERIC},
+      #{sample.elevationM,jdbcType=NUMERIC}
+      )
+    </foreach>
+  </insert>
+
+  <update id="markDone">
+    UPDATE terrain_analysis
+    SET
+    ascent_m = #{summary.ascentM,jdbcType=NUMERIC},
+    descent_m = #{summary.descentM,jdbcType=NUMERIC},
+    max_elev_m = #{summary.maxElevationM,jdbcType=NUMERIC},
+    min_elev_m = #{summary.minElevationM,jdbcType=NUMERIC},
+    sample_cnt = #{summary.sampleCount},
+    missing_cnt = #{summary.missingCount},
+    err_msg = NULL,
+    done_dt = CURRENT_TIMESTAMP,
+    status_cd = 'DONE'
+    WHERE analysis_id = #{analysisId}
+    AND status_cd = 'RUNNING'
+  </update>
+
+  <update id="markFailed">
+    UPDATE terrain_analysis
+    SET
+    status_cd = 'FAILED',
+    err_msg = #{errorMessage,jdbcType=VARCHAR},
+    ascent_m = NULL,
+    descent_m = NULL,
+    max_elev_m = NULL,
+    min_elev_m = NULL,
+    sample_cnt = NULL,
+    missing_cnt = NULL,
+    done_dt = NULL
+    WHERE analysis_id = #{analysisId}
+    AND status_cd = 'RUNNING'
+  </update>
+
+</mapper>

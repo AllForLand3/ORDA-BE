@@ -22,7 +22,7 @@ public class CourseElevationProfileService {
     private final CourseSamplingService courseSamplingService;
     private final ElevationService elevationService;
 
-    /** 저장 없이 지정한 코스 버전의 고도 프로파일을 계산한다. */
+    /** 코스 버전을 확인하고 좌표를 생성한 뒤 고도 프로파일을 계산한다. */
     public CourseElevationProfile calculate(
             long courseId, int expectedRevNo, long demId, BigDecimal requestedIntervalM) {
         if (demId <= 0) {
@@ -31,6 +31,15 @@ public class CourseElevationProfileService {
 
         CourseSamplingResult sampling =
                 courseSamplingService.sample(courseId, expectedRevNo, requestedIntervalM);
+
+        return calculate(sampling, demId);
+    }
+
+    /** 소유권과 버전 검증을 거쳐 확보한 내부 샘플 스냅샷으로 계산한다. 코스 조회와 좌표 생성을 다시 수행하지 않는다. */
+    public CourseElevationProfile calculate(CourseSamplingResult sampling, long demId) {
+        if (sampling == null || demId <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
 
         List<CourseElevationSample> samples = new ArrayList<>(sampling.samples().size());
 
@@ -69,9 +78,9 @@ public class CourseElevationProfileService {
 
                 if (differenceM > 0.0) {
                     ascentM += differenceM;
-                } else if {
+                } else if (differenceM < 0.0) {
                     descentM -= differenceM;
-                }(differenceM < 0.0)
+                }
 
                 validSegmentCount++;
             }
