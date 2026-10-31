@@ -1,4 +1,4 @@
-package com.allforland.orda.domain.analysis.vo;
+package com.allforland.orda.domain.analysis.dem.vo;
 
 import lombok.Getter;
 import lombok.experimental.Accessors;

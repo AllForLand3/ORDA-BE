@@ -50,7 +50,15 @@ public enum ErrorCode {
     DEM_CRS_MISMATCH(HttpStatus.SERVICE_UNAVAILABLE, "등록된 좌표계와 DEM 파일의 좌표계가 다릅니다."),
     DEM_METADATA_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "DEM 메타데이터를 확인해야 합니다."),
     DEM_TRANSFORM_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "DEM 좌표 변환에 실패했습니다."),
-    DEM_READ_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일을 판독하지 못했습니다.");
+    DEM_READ_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일을 판독하지 못했습니다."),
+
+    ANALYSIS_INVALID_SAMPLE_INTERVAL(
+            HttpStatus.BAD_REQUEST, "샘플 간격은 5~100m이며 소수점 첫째 자리까지 입력할 수 있습니다."),
+    ANALYSIS_SAMPLE_LIMIT_EXCEEDED(
+            HttpStatus.BAD_REQUEST, "분석 샘플은 시작점과 끝점을 포함해 최대 2,000개까지 허용됩니다."),
+    ANALYSIS_NO_VALID_ELEVATION(HttpStatus.UNPROCESSABLE_ENTITY, "코스에서 유효한 고도를 추출할 수 없습니다."),
+    ANALYSIS_INSUFFICIENT_VALID_SEGMENTS(
+            HttpStatus.UNPROCESSABLE_ENTITY, "유효한 인접 고도 샘플이 없어 통계를 산출할 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;

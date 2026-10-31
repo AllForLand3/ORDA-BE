@@ -1,6 +1,6 @@
-package com.allforland.orda.domain.analysis.mapper;
+package com.allforland.orda.domain.analysis.dem.mapper;
 
-import com.allforland.orda.domain.analysis.vo.DemAssetRow;
+import com.allforland.orda.domain.analysis.dem.vo.DemAssetRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

@@ -1,4 +1,4 @@
-package com.allforland.orda.domain.analysis.service;
+package com.allforland.orda.domain.analysis.dem.service;
 
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;

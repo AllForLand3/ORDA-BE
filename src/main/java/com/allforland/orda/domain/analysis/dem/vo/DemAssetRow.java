@@ -1,4 +1,4 @@
-package com.allforland.orda.domain.analysis.vo;
+package com.allforland.orda.domain.analysis.dem.vo;
 
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;

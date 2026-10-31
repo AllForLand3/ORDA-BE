@@ -1,11 +1,13 @@
-package com.allforland.orda.domain.analysis.service;
+package com.allforland.orda.domain.analysis.dem.service;
 
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
-import com.allforland.orda.domain.analysis.mapper.DemAssetMapper;
-import com.allforland.orda.domain.analysis.vo.DemAssetRow;
-import com.allforland.orda.domain.analysis.vo.ElevationResult;
+import com.allforland.orda.domain.analysis.dem.mapper.DemAssetMapper;
+import com.allforland.orda.domain.analysis.dem.vo.DemAssetRow;
+import com.allforland.orda.domain.analysis.dem.vo.ElevationCoordinate;
+import com.allforland.orda.domain.analysis.dem.vo.ElevationResult;
 import java.nio.file.Path;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,11 +24,23 @@ public class ElevationService {
      * 파일·설정 오류 예외를 구분하며, Reader 자원은 호출 안에서 해제하고 결과에는 숫자와 상태만 반환한다.
      */
     public ElevationResult extract(long demId, double longitude, double latitude) {
-        validateCoordinates(longitude, latitude);
+        return extractAll(demId, List.of(new ElevationCoordinate(longitude, latitude))).get(0);
+    }
 
-        if (demId <= 0) {
+    /** DEM 메타데이터·파일·Reader를 요청 단위로 준비하고 입력 순서대로 판독한다. */
+    public List<ElevationResult> extractAll(long demId, List<ElevationCoordinate> coordinates) {
+        if (demId <= 0 || coordinates == null || coordinates.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
+
+        for (ElevationCoordinate coordinate : coordinates) {
+            if (coordinate == null) {
+                throw new BusinessException(ErrorCode.DEM_INVALID_COORDINATE);
+            }
+            validateCoordinates(coordinate.longitude(), coordinate.latitude());
+        }
+
+        List<ElevationCoordinate> points = List.copyOf(coordinates);
 
         DemAssetRow dem = demAssetMapper.findById(demId);
 
@@ -38,7 +52,7 @@ public class ElevationService {
 
         Path file = demFileResolver.resolve(dem.filePath());
 
-        return demRasterReader.read(file, dem, longitude, latitude);
+        return demRasterReader.readAll(file, dem, points);
     }
 
     private void validateCoordinates(double longitude, double latitude) {

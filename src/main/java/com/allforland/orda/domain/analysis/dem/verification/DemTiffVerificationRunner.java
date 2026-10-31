@@ -1,14 +1,14 @@
-package com.allforland.orda.domain.analysis.verification;
+package com.allforland.orda.domain.analysis.dem.verification;
 
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
-import com.allforland.orda.domain.analysis.mapper.DemAssetMapper;
-import com.allforland.orda.domain.analysis.service.DemFileResolver;
-import com.allforland.orda.domain.analysis.service.DemRasterReader;
-import com.allforland.orda.domain.analysis.service.ElevationService;
-import com.allforland.orda.domain.analysis.vo.DemAssetRow;
-import com.allforland.orda.domain.analysis.vo.ElevationResult;
-import com.allforland.orda.domain.analysis.vo.ElevationStatus;
+import com.allforland.orda.domain.analysis.dem.mapper.DemAssetMapper;
+import com.allforland.orda.domain.analysis.dem.service.DemFileResolver;
+import com.allforland.orda.domain.analysis.dem.service.DemRasterReader;
+import com.allforland.orda.domain.analysis.dem.service.ElevationService;
+import com.allforland.orda.domain.analysis.dem.vo.DemAssetRow;
+import com.allforland.orda.domain.analysis.dem.vo.ElevationResult;
+import com.allforland.orda.domain.analysis.dem.vo.ElevationStatus;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
