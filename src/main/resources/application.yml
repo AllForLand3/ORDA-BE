@@ -29,6 +29,8 @@ springdoc:
   swagger-ui:
     enabled: false
 orda:
+  analysis:
+    result-time-zone: ${ORDA_ANALYSIS_RESULT_TIME_ZONE}
   dem:
     base-directory: ${ORDA_DEM_BASE_DIRECTORY:}
   auth:

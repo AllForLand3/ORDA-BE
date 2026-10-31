@@ -101,6 +101,7 @@ FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps
 - `SPRING_DATASOURCE_URL`
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
+- `ORDA_ANALYSIS_RESULT_TIME_ZONE`: 필수. 시간대 없는 `terrain_analysis.done_dt`의 실제 저장 기준 시간대(`UTC`, `Asia/Seoul` 등). 기본값이 없으며 누락·빈 값·잘못된 시간대이면 기동 실패
 - `ORDA_AUTH_JWT_SECRET_BASE64`: 최소 32바이트 암호학적 난수의 Base64. 기본값 없음, 부적합하면 기동 실패
 - `ORDA_AUTH_JWT_ACCESS_TOKEN_SECONDS`: 기본 3600초(1시간), 허용 1~3600초
 - `ORDA_AUTH_CORS_ALLOWED_ORIGINS`: 다른 출처에서 직접 호출할 FE Origin. 로컬 예시 `http://localhost:5173`, 여러 개는 쉼표로 구분. 기본 빈 값이며 `*`는 허용하지 않음
@@ -110,18 +111,23 @@ FE의 `/api → localhost:8080` 프록시는 그대로 사용합니다. `webapps
 JWT 키 생성 방법은 [.env.example](.env.example)의 주석을 참고하세요.
 `.env`는 Compose에서 사용하며, IDE/Tomcat 실행 시에는 환경변수를 직접 설정합니다.
 
+시간대 설정은 로컬·운영 모두 필요합니다. DB 도구의 `SHOW TimeZone`은 해당 도구 연결의 설정이므로,
+애플리케이션 연결에서 실제로 저장한 시각의 기준과 일치하는지 확인하세요. 한국 시간으로 저장했다면 `Asia/Seoul`,
+UTC로 저장했다면 `UTC`를 지정합니다. 이 설정은 기존 완료 시각을 해석해 UTC로 반환하며 DB 저장값을 변경하지 않습니다.
+서로 다른 시간대 기준으로 저장된 데이터가 섞여 있다면 하나의 설정으로 정확히 변환할 수 없으므로 별도 정리가 필요합니다.
+
 ## Docker로 EC2에서 수동 실행
 
 이 구성은 CI/CD 없이 EC2에서 WAR와 Docker 이미지를 직접 빌드해 실행하는 초기 확인용입니다. DB 컨테이너는 만들지 않고, EC2에 설치된 PostgreSQL에 연결합니다.
 
 1. EC2에 Docker Engine과 Docker Compose 플러그인을 설치하고 저장소를 준비합니다.
 2. 저장소 루트에서 `bash ./mvnw clean package`를 실행해 `target/orda-api.war`를 만듭니다. Windows에서 `.\mvnw.cmd clean package`로 빌드한다면, 먼저 EC2 저장소 루트에서 `mkdir -p target`을 실행한 뒤 Windows의 `target/orda-api.war`를 EC2의 해당 디렉터리에 복사합니다.
-3. `.env.example`을 `.env`로 복사하고 DB URL·사용자명·비밀번호와 JWT 키를 입력합니다. `.env`는 Git에서 제외됩니다.
+3. `.env.example`을 `.env`로 복사하고 DB URL·사용자명·비밀번호, JWT 키와 `ORDA_ANALYSIS_RESULT_TIME_ZONE`을 입력합니다. `.env`는 Git에서 제외됩니다.
 4. EC2에서 `docker compose up --build -d`로 이미지를 만들고 컨테이너를 시작합니다.
 
 ```bash
 cp .env.example .env
-# .env의 DB 접속 정보와 JWT 키를 설정하고 migration 적용 승인을 받은 뒤:
+# .env의 DB 접속 정보·JWT 키·분석 저장 시간대를 설정하고 migration 적용 승인을 받은 뒤:
 docker compose up --build -d
 docker compose logs -f backend
 ```
@@ -165,6 +171,7 @@ APP_HOST_PORT=8080
 SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:55432/gwanak_dev
 SPRING_DATASOURCE_USERNAME=<DB 사용자명>
 SPRING_DATASOURCE_PASSWORD=<DB 비밀번호>
+ORDA_ANALYSIS_RESULT_TIME_ZONE=<DB 완료 시각의 실제 저장 기준 시간대>
 ORDA_AUTH_JWT_SECRET_BASE64=<외부에서 안전하게 생성한 난수 키의 Base64>
 ORDA_AUTH_JWT_ACCESS_TOKEN_SECONDS=3600
 ORDA_AUTH_CORS_ALLOWED_ORIGINS=http://localhost:5173
