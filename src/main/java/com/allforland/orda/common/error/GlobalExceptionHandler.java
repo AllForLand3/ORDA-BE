@@ -81,10 +81,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         .buildAndExpand(exception.getAnalysisId())
                         .toUri();
         if (code.getStatus().is5xxServerError()) {
+            Throwable cause = exception.getCause() != null ? exception.getCause() : exception;
             LOG.error(
-                    "Request failed: traceId={}, type={}",
+                    "Request failed: traceId={}, analysisId={}, type={}",
                     TraceIdFilter.getOrCreateTraceId(request),
-                    exception.getClass().getSimpleName());
+                    exception.getAnalysisId(),
+                    cause.getClass().getSimpleName());
         }
         return ResponseEntity.status(code.getStatus())
                 .cacheControl(CacheControl.noStore())
