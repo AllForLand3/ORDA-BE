@@ -9,8 +9,7 @@ public class TerrainAnalysisExecutionException extends BusinessException {
 
     private final long analysisId;
 
-    public TerrainAnalysisExecutionException(
-        long analysisId, RuntimeException cause) {
+    public TerrainAnalysisExecutionException(long analysisId, RuntimeException cause) {
         super(resolveCode(cause));
         this.analysisId = analysisId;
         initCause(cause);

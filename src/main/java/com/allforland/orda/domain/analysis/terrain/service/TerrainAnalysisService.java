@@ -45,8 +45,7 @@ public class TerrainAnalysisService {
         } catch (RuntimeException failure) {
             recordFailure(prepared, failure);
 
-            throw new TerrainAnalysisExecutionException(
-                prepared.analysisId(), failure);
+            throw new TerrainAnalysisExecutionException(prepared.analysisId(), failure);
         }
     }
 

@@ -14,8 +14,7 @@ public class TerrainAnalysisRequest {
     private final int revNo;
     private final BigDecimal sampleIntervalM;
 
-    private TerrainAnalysisRequest(
-        String demId, int revNo, BigDecimal sampleIntervalM) {
+    private TerrainAnalysisRequest(String demId, int revNo, BigDecimal sampleIntervalM) {
         this.demId = demId;
         this.revNo = revNo;
         this.sampleIntervalM = sampleIntervalM;
@@ -36,9 +35,9 @@ public class TerrainAnalysisRequest {
         }
 
         if (revNo == null
-            || !revNo.isIntegralNumber()
-            || !revNo.canConvertToInt()
-            || revNo.intValue() <= 0) {
+                || !revNo.isIntegralNumber()
+                || !revNo.canConvertToInt()
+                || revNo.intValue() <= 0) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
@@ -52,7 +51,6 @@ public class TerrainAnalysisRequest {
             sampleIntervalM = interval.decimalValue();
         }
 
-        return new TerrainAnalysisRequest(
-            demId.textValue(), revNo.intValue(), sampleIntervalM);
+        return new TerrainAnalysisRequest(demId.textValue(), revNo.intValue(), sampleIntervalM);
     }
 }
