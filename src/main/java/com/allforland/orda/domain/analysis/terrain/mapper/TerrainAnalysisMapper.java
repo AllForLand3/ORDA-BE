@@ -18,9 +18,6 @@ public interface TerrainAnalysisMapper {
             @Param("demId") long demId,
             @Param("sampleIntervalM") BigDecimal sampleIntervalM);
 
-    /** 준비 트랜잭션 동안 소유자 코스의 변경·삭제를 막는다. */
-    Long lockOwnedCourse(@Param("courseId") long courseId, @Param("ownerUserId") long ownerUserId);
-
     /** 동일한 분석 조건의 기존 행을 조회한다. */
     TerrainAnalysisRow findByCondition(
             @Param("courseId") long courseId,

@@ -3,6 +3,7 @@ package com.allforland.orda.domain.analysis.terrain.service;
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.analysis.dem.service.ElevationService;
+import com.allforland.orda.domain.analysis.dem.vo.ElevationCoordinate;
 import com.allforland.orda.domain.analysis.dem.vo.ElevationResult;
 import com.allforland.orda.domain.analysis.dem.vo.ElevationStatus;
 import com.allforland.orda.domain.analysis.terrain.vo.CourseElevationProfile;
@@ -42,6 +43,16 @@ public class CourseElevationProfileService {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
+        List<ElevationCoordinate> coordinates =
+                sampling.samples().stream()
+                        .map(point -> new ElevationCoordinate(point.longitude(), point.latitude()))
+                        .toList();
+        List<ElevationResult> elevations = elevationService.extractAll(demId, coordinates);
+
+        if (elevations == null || elevations.size() != sampling.samples().size()) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
         List<CourseElevationSample> samples = new ArrayList<>(sampling.samples().size());
 
         Double minElevationM = null;
@@ -52,9 +63,9 @@ public class CourseElevationProfileService {
         double descentM = 0.0;
         int validSegmentCount = 0;
 
-        for (CourseSamplePoint point : sampling.samples()) {
-            ElevationResult elevation =
-                    elevationService.extract(demId, point.longitude(), point.latitude());
+        for (int index = 0; index < sampling.samples().size(); index++) {
+            CourseSamplePoint point = sampling.samples().get(index);
+            ElevationResult elevation = elevations.get(index);
 
             samples.add(new CourseElevationSample(point, elevation));
 

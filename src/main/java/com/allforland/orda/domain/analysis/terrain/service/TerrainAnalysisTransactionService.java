@@ -5,6 +5,7 @@ import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.analysis.dem.mapper.DemAssetMapper;
 import com.allforland.orda.domain.analysis.dem.vo.DemAssetRow;
 import com.allforland.orda.domain.analysis.dem.vo.ElevationStatus;
+import com.allforland.orda.domain.analysis.terrain.mapper.CourseAnalysisMapper;
 import com.allforland.orda.domain.analysis.terrain.mapper.TerrainAnalysisMapper;
 import com.allforland.orda.domain.analysis.terrain.vo.CourseElevationProfile;
 import com.allforland.orda.domain.analysis.terrain.vo.CourseSamplingResult;
@@ -18,10 +19,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -33,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TerrainAnalysisTransactionService {
 
     private final AuthService authService;
-    private final SqlSessionTemplate sqlSessionTemplate;
+    private final CourseAnalysisMapper courseAnalysisMapper;
     private final CourseSamplingService samplingService;
     private final CourseSampleDistanceGenerator distanceGenerator;
     private final DemAssetMapper demMapper;
@@ -53,11 +52,7 @@ public class TerrainAnalysisTransactionService {
         long ownerUserId = authService.requireCurrentUser().userId();
         BigDecimal interval = distanceGenerator.normalizeInterval(requestedIntervalM);
 
-        // 기존 XML의 잠금 SQL을 사용해 Mapper 인터페이스를 변경하지 않는다.
-        Long lockedCourseId =
-                sqlSessionTemplate.selectOne(
-                        "com.allforland.orda.domain.analysis.terrain.mapper.CourseAnalysisMapper.lockOwnedCourse",
-                        Map.of("courseId", courseId, "ownerUserId", ownerUserId));
+        Long lockedCourseId = courseAnalysisMapper.lockOwnedCourse(courseId, ownerUserId);
 
         if (lockedCourseId == null) {
             throw new BusinessException(ErrorCode.COURSE_NOT_FOUND);

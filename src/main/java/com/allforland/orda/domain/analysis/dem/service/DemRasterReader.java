@@ -3,12 +3,15 @@ package com.allforland.orda.domain.analysis.dem.service;
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.analysis.dem.vo.DemAssetRow;
+import com.allforland.orda.domain.analysis.dem.vo.ElevationCoordinate;
 import com.allforland.orda.domain.analysis.dem.vo.ElevationResult;
 import java.awt.Rectangle;
 import java.awt.image.DataBuffer;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
@@ -35,19 +38,29 @@ public class DemRasterReader {
 
     /** DemFileResolver가 검증한 파일을 판독한다. longitude와 latitude는 EPSG:4326의 경도·위도 순서다. */
     public ElevationResult read(Path file, DemAssetRow dem, double longitude, double latitude) {
+        return readAll(file, dem, List.of(new ElevationCoordinate(longitude, latitude))).get(0);
+    }
+
+    /** 동일 DEM 좌표 목록을 하나의 Reader로 입력 순서대로 판독한다. */
+    public List<ElevationResult> readAll(
+            Path file, DemAssetRow dem, List<ElevationCoordinate> coordinates) {
+        if (coordinates == null || coordinates.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
 
         GeoTiffReader reader = null;
         GridCoverage2D coverage = null;
         ImageInputStream rasterInput = null;
 
         try {
-            // GeoTools가 기본 CRS를 선택하거나 생성 단계에서 실패하기 전에 내부 키를 검사한다.
-            CoordinateReferenceSystem declaredCrs = readInternalCrs(file);
             // 지연 판독에서 생성되는 파일 스트림의 수명을 호출 범위로 제한한다.
             rasterInput = ImageIO.createImageInputStream(file.toFile());
             if (rasterInput == null) {
                 throw new BusinessException(ErrorCode.DEM_READ_FAILED);
             }
+            // 동일 스트림에서 내부 CRS를 먼저 검사한 뒤 GeoTools 판독에 재사용한다.
+            CoordinateReferenceSystem declaredCrs = readInternalCrs(rasterInput);
+            rasterInput.seek(0);
             reader =
                     new GeoTiffReader(
                             rasterInput,
@@ -80,52 +93,25 @@ public class DemRasterReader {
             int dataType = image.getSampleModel().getDataType();
             Double noData = resolveNoData(metadata, dem, dataType);
 
-            double[] rasterPoint = toRasterCoordinates(longitude, latitude, rasterCrs);
+            MathTransform inputToRaster =
+                    CRS.findMathTransform(CRS.decode("EPSG:4326", true), rasterCrs, false);
+            MathTransform rasterToGrid = coverage.getGridGeometry().getGridToCRS2D().inverse();
+            List<ElevationResult> results = new ArrayList<>(coordinates.size());
 
-            double[] gridPoint = toGridCoordinates(coverage, rasterPoint);
-
-            int minX = image.getMinX();
-            int minY = image.getMinY();
-
-            // getGridToCRS2D()의 격자 좌표는 픽셀 중심을 기준으로 한다.
-            // 중심이 minX인 픽셀의 왼쪽 경계는 minX - 0.5다.
-            double left = minX - 0.5;
-            double top = minY - 0.5;
-            double right = (double) minX + image.getWidth() - 0.5;
-            double bottom = (double) minY + image.getHeight() - 0.5;
-
-            if (gridPoint[0] < left
-                    || gridPoint[0] >= right
-                    || gridPoint[1] < top
-                    || gridPoint[1] >= bottom) {
-                return ElevationResult.outsideCoverage();
+            for (ElevationCoordinate coordinate : coordinates) {
+                double[] rasterPoint =
+                        transform(
+                                inputToRaster,
+                                new double[] {coordinate.longitude(), coordinate.latitude()});
+                double[] gridPoint = transform(rasterToGrid, rasterPoint);
+                results.add(sample(image, noData, gridPoint));
             }
 
-            // 최근접 픽셀을 선택하며, 동률이면 더 큰 격자 좌표를 선택한다.
-            int x = (int) Math.floor(gridPoint[0] + 0.5);
-            int y = (int) Math.floor(gridPoint[1] + 0.5);
-
-            if (x < minX
-                    || y < minY
-                    || x >= (long) minX + image.getWidth()
-                    || y >= (long) minY + image.getHeight()) {
-                return ElevationResult.outsideCoverage();
-            }
-
-            double value = image.getData(new Rectangle(x, y, 1, 1)).getSampleDouble(x, y, 0);
-
-            if (noData != null && sameValue(value, noData)) {
-                return ElevationResult.noData();
-            }
-
-            if (!Double.isFinite(value)) {
-                return ElevationResult.invalidValue();
-            }
-
-            return ElevationResult.valid(value);
-
+            return List.copyOf(results);
         } catch (BusinessException exception) {
             throw exception;
+        } catch (FactoryException | TransformException exception) {
+            throw new BusinessException(ErrorCode.DEM_TRANSFORM_FAILED);
         } catch (IOException | RuntimeException exception) {
             // 내부 파일 경로나 외부 라이브러리 예외 메시지를 노출하지 않는다.
             throw new BusinessException(ErrorCode.DEM_READ_FAILED);
@@ -141,23 +127,60 @@ public class DemRasterReader {
         }
     }
 
-    private CoordinateReferenceSystem readInternalCrs(Path file) throws IOException {
-        try (ImageInputStream input = ImageIO.createImageInputStream(file.toFile())) {
-            if (input == null) {
-                throw new BusinessException(ErrorCode.DEM_READ_FAILED);
-            }
-            java.util.Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
-            if (!readers.hasNext()) {
-                throw new BusinessException(ErrorCode.DEM_READ_FAILED);
-            }
-            ImageReader imageReader = readers.next();
-            try {
-                imageReader.setInput(input);
-                return decodeInternalCrs(
-                        new GeoTiffIIOMetadataDecoder(imageReader.getImageMetadata(0)));
-            } finally {
-                imageReader.dispose();
-            }
+    private ElevationResult sample(RenderedImage image, Double noData, double[] gridPoint) {
+        int minX = image.getMinX();
+        int minY = image.getMinY();
+
+        // getGridToCRS2D()의 격자 좌표는 픽셀 중심을 기준으로 한다.
+        // 중심이 minX인 픽셀의 왼쪽 경계는 minX - 0.5다.
+        double left = minX - 0.5;
+        double top = minY - 0.5;
+        double right = (double) minX + image.getWidth() - 0.5;
+        double bottom = (double) minY + image.getHeight() - 0.5;
+
+        if (gridPoint[0] < left
+                || gridPoint[0] >= right
+                || gridPoint[1] < top
+                || gridPoint[1] >= bottom) {
+            return ElevationResult.outsideCoverage();
+        }
+
+        // 최근접 픽셀을 선택하며, 동률이면 더 큰 격자 좌표를 선택한다.
+        int x = (int) Math.floor(gridPoint[0] + 0.5);
+        int y = (int) Math.floor(gridPoint[1] + 0.5);
+
+        if (x < minX
+                || y < minY
+                || x >= (long) minX + image.getWidth()
+                || y >= (long) minY + image.getHeight()) {
+            return ElevationResult.outsideCoverage();
+        }
+
+        double value = image.getData(new Rectangle(x, y, 1, 1)).getSampleDouble(x, y, 0);
+
+        if (noData != null && sameValue(value, noData)) {
+            return ElevationResult.noData();
+        }
+
+        if (!Double.isFinite(value)) {
+            return ElevationResult.invalidValue();
+        }
+
+        return ElevationResult.valid(value);
+    }
+
+    private CoordinateReferenceSystem readInternalCrs(ImageInputStream input) throws IOException {
+        java.util.Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+        if (!readers.hasNext()) {
+            throw new BusinessException(ErrorCode.DEM_READ_FAILED);
+        }
+        ImageReader imageReader = readers.next();
+        try {
+            imageReader.setInput(input);
+            return decodeInternalCrs(
+                    new GeoTiffIIOMetadataDecoder(imageReader.getImageMetadata(0)));
+        } finally {
+            imageReader.dispose();
         }
     }
 
@@ -238,37 +261,11 @@ public class DemRasterReader {
         }
     }
 
-    private double[] toRasterCoordinates(
-            double longitude, double latitude, CoordinateReferenceSystem rasterCrs) {
-
+    private double[] transform(MathTransform transform, double[] point) {
         try {
-            CoordinateReferenceSystem inputCrs = CRS.decode("EPSG:4326", true);
-
-            MathTransform transform = CRS.findMathTransform(inputCrs, rasterCrs, false);
-
             double[] result = new double[2];
-
-            transform.transform(new double[] {longitude, latitude}, 0, result, 0, 1);
-
+            transform.transform(point, 0, result, 0, 1);
             requireFinite(result);
-
-            return result;
-        } catch (FactoryException | TransformException exception) {
-            throw new BusinessException(ErrorCode.DEM_TRANSFORM_FAILED);
-        }
-    }
-
-    private double[] toGridCoordinates(GridCoverage2D coverage, double[] rasterPoint) {
-
-        try {
-            MathTransform inverse = coverage.getGridGeometry().getGridToCRS2D().inverse();
-
-            double[] result = new double[2];
-
-            inverse.transform(rasterPoint, 0, result, 0, 1);
-
-            requireFinite(result);
-
             return result;
         } catch (TransformException exception) {
             throw new BusinessException(ErrorCode.DEM_TRANSFORM_FAILED);
