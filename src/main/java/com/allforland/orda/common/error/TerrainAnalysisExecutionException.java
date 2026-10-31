@@ -1,9 +1,8 @@
-package com.allforland.orda.domain.analysis.terrain.service;
+package com.allforland.orda.common.error;
 
-import com.allforland.orda.common.error.BusinessException;
-import com.allforland.orda.common.error.ErrorCode;
 import lombok.Getter;
 
+/** 기존 오류 코드와 분석 결과 조회에 필요한 식별자를 함께 전달한다. */
 @Getter
 public class TerrainAnalysisExecutionException extends BusinessException {
 

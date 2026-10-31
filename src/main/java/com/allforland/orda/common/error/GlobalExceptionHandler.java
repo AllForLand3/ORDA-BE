@@ -1,7 +1,6 @@
 package com.allforland.orda.common.error;
 
 import com.allforland.orda.common.logging.TraceIdFilter;
-import com.allforland.orda.domain.analysis.terrain.service.TerrainAnalysisExecutionException;
 import java.net.URI;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
