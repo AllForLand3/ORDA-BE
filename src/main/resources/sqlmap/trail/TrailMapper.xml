@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.allforland.orda.domain.trail.mapper.TrailMapper">
+  <resultMap id="courseResult" type="com.allforland.orda.domain.trail.vo.TrailCourseRow">
+    <constructor>
+      <idArg column="course_id" javaType="java.lang.Long"/>
+      <arg column="mountain_id" javaType="java.lang.Long"/>
+      <arg column="rev_no" javaType="java.lang.Integer"/>
+      <arg column="geometry_valid" javaType="java.lang.Boolean"/>
+    </constructor>
+  </resultMap>
+
+  <resultMap id="nearbySpotResult" type="com.allforland.orda.domain.trail.vo.NearbySpotRow">
+    <constructor>
+      <idArg column="spot_id" javaType="java.lang.Long"/>
+      <arg column="src_class_nm" javaType="java.lang.String"/>
+      <arg column="detail_txt" javaType="java.lang.String"/>
+      <arg column="distance_m" javaType="java.math.BigDecimal"/>
+      <arg column="match_distance_m" javaType="java.math.BigDecimal"/>
+      <arg column="verify_status_cd" javaType="java.lang.String"/>
+      <arg column="longitude" javaType="java.lang.Double"/>
+      <arg column="latitude" javaType="java.lang.Double"/>
+    </constructor>
+  </resultMap>
+
+  <resultMap id="spotTagResult" type="com.allforland.orda.domain.trail.vo.SpotTagRow">
+    <constructor>
+      <arg column="spot_id" javaType="java.lang.Long"/>
+      <arg column="tag_cd" javaType="java.lang.String"/>
+      <arg column="verify_status_cd" javaType="java.lang.String"/>
+      <arg column="extract_type_cd" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+
+  <resultMap id="nearbyFacilityResult" type="com.allforland.orda.domain.trail.vo.NearbyFacilityRow">
+    <constructor>
+      <idArg column="facility_id" javaType="java.lang.Long"/>
+      <arg column="fac_type_cd" javaType="java.lang.String"/>
+      <arg column="fac_nm" javaType="java.lang.String"/>
+      <arg column="addr" javaType="java.lang.String"/>
+      <arg column="distance_m" javaType="java.math.BigDecimal"/>
+      <arg column="loc_basis_cd" javaType="java.lang.String"/>
+      <arg column="verify_status_cd" javaType="java.lang.String"/>
+      <arg column="longitude" javaType="java.lang.Double"/>
+      <arg column="latitude" javaType="java.lang.Double"/>
+    </constructor>
+  </resultMap>
+
+  <resultMap id="spotDetailResult" type="com.allforland.orda.domain.trail.vo.SpotDetailRow">
+    <constructor>
+      <idArg column="spot_id" javaType="java.lang.Long"/>
+      <arg column="mountain_id" javaType="java.lang.Long"/>
+      <arg column="dataset_id" javaType="java.lang.Long"/>
+      <arg column="src_spot_id" javaType="java.lang.String"/>
+      <arg column="src_class_nm" javaType="java.lang.String"/>
+      <arg column="detail_txt" javaType="java.lang.String"/>
+      <arg column="etc_txt" javaType="java.lang.String"/>
+      <arg column="verify_status_cd" javaType="java.lang.String"/>
+      <arg column="dup_of_spot_id" javaType="java.lang.Long"/>
+      <arg column="longitude" javaType="java.lang.Double"/>
+      <arg column="latitude" javaType="java.lang.Double"/>
+    </constructor>
+  </resultMap>
+
+  <resultMap id="spotMatchResult" type="com.allforland.orda.domain.trail.vo.SpotMatchRow">
+    <constructor>
+      <arg column="edge_id" javaType="java.lang.Long"/>
+      <arg column="dist_m" javaType="java.math.BigDecimal"/>
+      <arg column="pos_ratio" javaType="java.math.BigDecimal"/>
+      <arg column="match_type_cd" javaType="java.lang.String"/>
+      <arg column="match_status_cd" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+
+  <resultMap id="facilityDetailResult" type="com.allforland.orda.domain.trail.vo.FacilityDetailRow">
+    <constructor>
+      <idArg column="facility_id" javaType="java.lang.Long"/>
+      <arg column="mountain_id" javaType="java.lang.Long"/>
+      <arg column="fac_type_cd" javaType="java.lang.String"/>
+      <arg column="fac_nm" javaType="java.lang.String"/>
+      <arg column="addr" javaType="java.lang.String"/>
+      <arg column="loc_basis_cd" javaType="java.lang.String"/>
+      <arg column="verify_status_cd" javaType="java.lang.String"/>
+      <arg column="dup_of_facility_id" javaType="java.lang.Long"/>
+      <arg column="dataset_id" javaType="java.lang.Long"/>
+      <arg column="dataset_nm" javaType="java.lang.String"/>
+      <arg column="provider_nm" javaType="java.lang.String"/>
+      <arg column="base_de" javaType="java.lang.String"/>
+      <arg column="collect_de" javaType="java.lang.String"/>
+      <arg column="longitude" javaType="java.lang.Double"/>
+      <arg column="latitude" javaType="java.lang.Double"/>
+    </constructor>
+  </resultMap>
+
+  <select id="findOwnedCourse" resultMap="courseResult">
+    SELECT c.course_id, c.mountain_id, c.rev_no,
+           COALESCE(ST_SRID(c.geom) = 5179 AND NOT ST_IsEmpty(c.geom) AND ST_IsValid(c.geom),
+                    false) AS geometry_valid
+    FROM course c
+    WHERE c.course_id = #{courseId} AND c.owner_user_id = #{ownerUserId} AND c.del_yn = 'N'
+  </select>
+
+  <!-- 대표 지점(dup_of_spot_id 없음)이면서 검수 제외(REJECTED)가 아닌 지점·태그만 조회 대상으로 본다. -->
+  <sql id="visibleTaggedSpot">
+    s.dup_of_spot_id IS NULL
+    AND s.verify_status_cd &lt;&gt; 'REJECTED'
+    AND EXISTS (
+        SELECT 1
+        FROM spot_tag t
+        WHERE t.spot_id = s.spot_id
+          AND t.verify_status_cd &lt;&gt; 'REJECTED'
+          <if test="tag != null">AND t.tag_cd = #{tag}</if>
+          <if test="verifyStatus != null">AND t.verify_status_cd = #{verifyStatus}</if>
+    )
+  </sql>
+
+  <select id="spotDataExists" resultType="boolean">
+    SELECT EXISTS (
+        SELECT 1
+        FROM trail_spot s
+        WHERE s.mountain_id = #{mountainId}
+          AND s.dup_of_spot_id IS NULL
+          AND s.verify_status_cd &lt;&gt; 'REJECTED'
+          AND EXISTS (
+              SELECT 1 FROM spot_tag t
+              WHERE t.spot_id = s.spot_id AND t.verify_status_cd &lt;&gt; 'REJECTED'
+          )
+    )
+  </select>
+
+  <!-- 거리는 EPSG:5179 코스 형상과 지점 사이의 평면 최단거리(m)다. -->
+  <select id="findNearbySpots" resultMap="nearbySpotResult">
+    SELECT s.spot_id, s.src_class_nm, s.detail_txt,
+           ROUND(ST_Distance(c.geom, s.geom)::numeric, 1) AS distance_m,
+           (SELECT MIN(m.dist_m)
+            FROM spot_edge_match m
+            WHERE m.spot_id = s.spot_id AND m.match_status_cd &lt;&gt; 'REJECTED') AS match_distance_m,
+           s.verify_status_cd,
+           ST_X(ST_Transform(s.geom, 4326)) AS longitude,
+           ST_Y(ST_Transform(s.geom, 4326)) AS latitude
+    FROM course c
+    JOIN trail_spot s
+      ON s.mountain_id = c.mountain_id
+     AND ST_DWithin(c.geom, s.geom, #{radiusM})
+    WHERE c.course_id = #{courseId}
+      AND <include refid="visibleTaggedSpot"/>
+    ORDER BY distance_m, s.spot_id
+  </select>
+
+  <select id="findSpotTags" resultMap="spotTagResult">
+    SELECT t.spot_id, t.tag_cd, t.verify_status_cd, t.extract_type_cd
+    FROM spot_tag t
+    WHERE t.spot_id IN
+      <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">#{spotId}</foreach>
+      <if test="!includeRejected">AND t.verify_status_cd &lt;&gt; 'REJECTED'</if>
+      <if test="verifyStatus != null">AND t.verify_status_cd = #{verifyStatus}</if>
+    ORDER BY t.spot_id, t.tag_cd
+  </select>
+
+  <select id="facilityDataExists" resultType="boolean">
+    SELECT EXISTS (
+        SELECT 1
+        FROM facility f
+        WHERE f.mountain_id = #{mountainId}
+          AND f.dup_of_facility_id IS NULL
+          AND f.verify_status_cd &lt;&gt; 'REJECTED'
+          <if test="type != null">AND f.fac_type_cd = #{type}</if>
+    )
+  </select>
+
+  <!-- 거리는 EPSG:5179 코스 형상과 시설 사이의 평면 최단거리(m)다. -->
+  <select id="findNearbyFacilities" resultMap="nearbyFacilityResult">
+    SELECT f.facility_id, f.fac_type_cd, f.fac_nm, f.addr,
+           ROUND(ST_Distance(c.geom, f.geom)::numeric, 1) AS distance_m,
+           f.loc_basis_cd, f.verify_status_cd,
+           ST_X(ST_Transform(f.geom, 4326)) AS longitude,
+           ST_Y(ST_Transform(f.geom, 4326)) AS latitude
+    FROM course c
+    JOIN facility f
+      ON f.mountain_id = c.mountain_id
+     AND ST_DWithin(c.geom, f.geom, #{radiusM})
+    WHERE c.course_id = #{courseId}
+      AND f.dup_of_facility_id IS NULL
+      AND f.verify_status_cd &lt;&gt; 'REJECTED'
+      <if test="type != null">AND f.fac_type_cd = #{type}</if>
+    ORDER BY distance_m, f.facility_id
+  </select>
+
+  <select id="findSpot" resultMap="spotDetailResult">
+    SELECT s.spot_id, s.mountain_id, s.dataset_id, s.src_spot_id, s.src_class_nm,
+           s.detail_txt, s.etc_txt, s.verify_status_cd, s.dup_of_spot_id,
+           ST_X(ST_Transform(s.geom, 4326)) AS longitude,
+           ST_Y(ST_Transform(s.geom, 4326)) AS latitude
+    FROM trail_spot s
+    WHERE s.spot_id = #{spotId}
+  </select>
+
+  <select id="findSpotMatches" resultMap="spotMatchResult">
+    SELECT m.edge_id, m.dist_m, m.pos_ratio, m.match_type_cd, m.match_status_cd
+    FROM spot_edge_match m
+    WHERE m.spot_id = #{spotId}
+    ORDER BY m.dist_m, m.edge_id
+  </select>
+
+  <select id="findFacility" resultMap="facilityDetailResult">
+    SELECT f.facility_id, f.mountain_id, f.fac_type_cd, f.fac_nm, f.addr, f.loc_basis_cd,
+           f.verify_status_cd, f.dup_of_facility_id,
+           d.dataset_id, d.dataset_nm, d.provider_nm,
+           TO_CHAR(d.base_de, 'YYYY-MM-DD') AS base_de,
+           TO_CHAR(d.collect_de, 'YYYY-MM-DD') AS collect_de,
+           ST_X(ST_Transform(f.geom, 4326)) AS longitude,
+           ST_Y(ST_Transform(f.geom, 4326)) AS latitude
+    FROM facility f
+    JOIN source_dataset d ON d.dataset_id = f.dataset_id
+    WHERE f.facility_id = #{facilityId}
+  </select>
+</mapper>
