@@ -1,5 +1,6 @@
 package com.allforland.orda.domain.analysis.terrain.service;
 
+import com.allforland.orda.common.error.TerrainAnalysisExecutionException;
 import com.allforland.orda.domain.analysis.terrain.vo.CourseElevationProfile;
 import com.allforland.orda.domain.analysis.terrain.vo.PreparedTerrainAnalysis;
 import com.allforland.orda.domain.analysis.terrain.vo.TerrainAnalysisPreparation;
@@ -44,7 +45,8 @@ public class TerrainAnalysisService {
             return prepared.analysisId();
         } catch (RuntimeException failure) {
             recordFailure(prepared, failure);
-            throw failure;
+
+            throw new TerrainAnalysisExecutionException(prepared.analysisId(), failure);
         }
     }
 

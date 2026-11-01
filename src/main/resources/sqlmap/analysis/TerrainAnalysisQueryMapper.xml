@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.allforland.orda.domain.analysis.terrain.mapper.TerrainAnalysisQueryMapper">
+
+  <resultMap
+    id="queryRow"
+    type="com.allforland.orda.domain.analysis.terrain.vo.TerrainAnalysisQueryRow"
+    autoMapping="false">
+    <result property="courseId" column="course_id"/>
+    <result property="currentRevNo" column="current_rev_no"/>
+
+    <result property="analysisId" column="analysis_id"/>
+    <result property="revNo" column="analysis_rev_no"/>
+    <result property="demId" column="dem_id"/>
+    <result property="demName" column="dem_nm"/>
+    <result property="resolutionM" column="res_m"/>
+    <result property="sampleIntervalM" column="sample_itv_m"/>
+    <result property="status" column="status_cd"/>
+
+    <result property="ascentM" column="ascent_m"/>
+    <result property="descentM" column="descent_m"/>
+    <result property="maxElevationM" column="max_elev_m"/>
+    <result property="minElevationM" column="min_elev_m"/>
+    <result property="sampleCount" column="sample_cnt"/>
+    <result property="missingCount" column="missing_cnt"/>
+
+    <result property="completedAt" column="done_dt"
+            javaType="java.time.LocalDateTime"/>
+    <result property="errorMessage" column="err_msg"/>
+
+    <result property="seqNo" column="seq_no"/>
+    <result property="distanceM" column="dist_m"/>
+    <result property="elevationM" column="elev_m"/>
+  </resultMap>
+
+  <sql id="columns">
+    c.course_id,
+    c.rev_no AS current_rev_no,
+    a.analysis_id,
+    a.rev_no AS analysis_rev_no,
+    a.dem_id,
+    d.dem_nm,
+    d.res_m,
+    a.sample_itv_m,
+    a.status_cd,
+    a.ascent_m,
+    a.descent_m,
+    a.max_elev_m,
+    a.min_elev_m,
+    a.sample_cnt,
+    a.missing_cnt,
+    a.done_dt,
+    a.err_msg,
+    s.seq_no,
+    s.dist_m,
+    s.elev_m
+  </sql>
+
+  <select id="findCurrent" resultMap="queryRow" useCache="false">
+    SELECT
+    <include refid="columns"/>
+    FROM course c
+
+    LEFT JOIN terrain_analysis a
+    ON a.course_id = c.course_id
+    AND a.rev_no = c.rev_no
+    AND a.dem_id = #{demId}
+    AND a.sample_itv_m = #{sampleIntervalM}
+
+    LEFT JOIN dem_asset d
+    ON d.dem_id = a.dem_id
+
+    LEFT JOIN elevation_sample s
+    ON s.analysis_id = a.analysis_id
+    AND a.status_cd = 'DONE'
+    AND #{includeSamples,jdbcType=BOOLEAN}
+
+    WHERE c.course_id = #{courseId}
+    AND c.owner_user_id = #{ownerUserId}
+    AND c.del_yn = 'N'
+
+    ORDER BY s.seq_no
+  </select>
+
+  <select id="findOwnedById" resultMap="queryRow" useCache="false">
+    SELECT
+    <include refid="columns"/>
+    FROM terrain_analysis a
+
+    JOIN course c
+    ON c.course_id = a.course_id
+
+    JOIN dem_asset d
+    ON d.dem_id = a.dem_id
+
+    LEFT JOIN elevation_sample s
+    ON s.analysis_id = a.analysis_id
+    AND a.status_cd = 'DONE'
+
+    WHERE a.analysis_id = #{analysisId}
+    AND c.owner_user_id = #{ownerUserId}
+    AND c.del_yn = 'N'
+
+    ORDER BY s.seq_no
+  </select>
+
+</mapper>

@@ -1,12 +1,14 @@
 package com.allforland.orda.common.error;
 
 import com.allforland.orda.common.logging.TraceIdFilter;
+import java.net.URI;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -65,6 +68,30 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             cause = cause.getCause();
         }
         return handleExceptionInternal(exception, null, headers, status, request);
+    }
+
+    /** 분석 실행 실패도 공통 오류 형식으로 반환하고 결과 조회 경로를 제공한다. */
+    @ExceptionHandler(TerrainAnalysisExecutionException.class)
+    public ResponseEntity<ApiErrorResponse> handleAnalysisExecution(
+            TerrainAnalysisExecutionException exception, HttpServletRequest request) {
+        ErrorCode code = exception.getErrorCode();
+        URI location =
+                ServletUriComponentsBuilder.fromContextPath(request)
+                        .path("/api/terrain-analyses/{analysisId}")
+                        .buildAndExpand(exception.getAnalysisId())
+                        .toUri();
+        if (code.getStatus().is5xxServerError()) {
+            Throwable cause = exception.getCause() != null ? exception.getCause() : exception;
+            LOG.error(
+                    "Request failed: traceId={}, analysisId={}, type={}",
+                    TraceIdFilter.getOrCreateTraceId(request),
+                    exception.getAnalysisId(),
+                    cause.getClass().getSimpleName());
+        }
+        return ResponseEntity.status(code.getStatus())
+                .cacheControl(CacheControl.noStore())
+                .location(location)
+                .body(response(code.getStatus(), code, List.of(), request));
     }
 
     @ExceptionHandler(BusinessException.class)
