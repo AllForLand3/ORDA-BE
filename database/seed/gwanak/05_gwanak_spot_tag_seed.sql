@@ -323,8 +323,9 @@ DO NOTHING;
 -- 규칙만으로 판단할 수 없는 17개 지점은 메모와 DEM 고도·경사를 보고 데스크 검수했다 (현장 확인 아님).
 --   VERIFIED/REJECTED 로 반영했고, 험한 암릉 로프 2곳에는 STEEP 을 MANUAL 로 추가했다.
 --   검수자를 특정한 계정이 없으므로 verify_user_id·verify_dt 는 NULL 이다.
-INSERT INTO public.spot_tag (spot_id, tag_cd, extract_type_cd, verify_status_cd)
-SELECT spot.spot_id, seed.tag_cd, seed.extract_type_cd, seed.verify_status_cd
+-- 적재 후 행 단위로 검증하기 위해 시드 태그를 트랜잭션 임시 테이블에 담는다.
+CREATE TEMP TABLE seed_spot_tag ON COMMIT DROP AS
+SELECT *
 FROM (
     VALUES
     ('kfs:116200604:PMNTN_SPOT', '7736', 'STAIR', 'KEYWORD', 'UNVERIFIED'),
@@ -503,25 +504,34 @@ FROM (
     ('kfs:116200201:PMNTN_SPOT', '7728', 'TOILET', 'KEYWORD', 'UNVERIFIED'),
     ('kfs:116200201:PMNTN_SPOT', '7729', 'ROPE', 'KEYWORD', 'REJECTED'),
     ('kfs:116200201:PMNTN_SPOT', '100649', 'DANGER', 'KEYWORD', 'UNVERIFIED')
-) AS seed (dataset_nm, src_spot_id, tag_cd, extract_type_cd, verify_status_cd)
+) AS seed (dataset_nm, src_spot_id, tag_cd, extract_type_cd, verify_status_cd);
+
+INSERT INTO public.spot_tag (spot_id, tag_cd, extract_type_cd, verify_status_cd)
+SELECT spot.spot_id, seed.tag_cd, seed.extract_type_cd, seed.verify_status_cd
+FROM seed_spot_tag AS seed
 JOIN public.source_dataset AS dataset ON dataset.dataset_nm = seed.dataset_nm
 JOIN public.trail_spot AS spot ON spot.dataset_id = dataset.dataset_id AND spot.src_spot_id = seed.src_spot_id
 ON CONFLICT (spot_id, tag_cd)
 DO NOTHING;
 
--- 연결할 지점을 찾지 못한 태그가 있으면 조용히 빠지지 않도록 실패시킨다.
+-- 연결할 지점을 찾지 못해 spot_tag 에 없는 시드 태그가 하나라도 있으면 조용히 빠지지 않도록 실패시킨다.
 DO $$
 DECLARE
-    expected_cnt integer := 176;
-    actual_cnt integer;
+    missing_cnt bigint;
 BEGIN
-    SELECT count(*) INTO actual_cnt
-    FROM public.spot_tag AS tag
-    JOIN public.trail_spot AS spot ON spot.spot_id = tag.spot_id
-    JOIN public.source_dataset AS dataset ON dataset.dataset_id = spot.dataset_id
-    WHERE dataset.dataset_nm LIKE 'kfs:%:PMNTN_SPOT';
-    IF actual_cnt < expected_cnt THEN
-        RAISE EXCEPTION 'spot_tag 적재 건수 부족: 기대 %, 실제 %', expected_cnt, actual_cnt;
+    SELECT count(*) INTO missing_cnt
+    FROM seed_spot_tag AS seed
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM public.source_dataset AS dataset
+        JOIN public.trail_spot AS spot
+          ON spot.dataset_id = dataset.dataset_id AND spot.src_spot_id = seed.src_spot_id
+        JOIN public.spot_tag AS tag
+          ON tag.spot_id = spot.spot_id AND tag.tag_cd = seed.tag_cd
+        WHERE dataset.dataset_nm = seed.dataset_nm
+    );
+    IF missing_cnt > 0 THEN
+        RAISE EXCEPTION 'spot_tag 적재 누락 %건', missing_cnt;
     END IF;
 END
 $$;
