@@ -6,6 +6,7 @@ import com.allforland.orda.common.geo.LineStringGeometry;
 import com.allforland.orda.domain.auth.service.AuthService;
 import com.allforland.orda.domain.course.dto.CourseCreateRequest;
 import com.allforland.orda.domain.course.dto.CourseDetailResponse;
+import com.allforland.orda.domain.course.dto.CourseListItemResponse;
 import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
 import com.allforland.orda.domain.course.mapper.CourseMapper;
 import com.allforland.orda.domain.course.vo.CourseGeometryRow;
@@ -30,6 +31,12 @@ public class CourseService {
     private final AuthService authService;
     private final ObjectMapper objectMapper;
     private final CourseEditTagService editTags;
+
+    /** 요청 파라미터 대신 인증된 사용자 ID로 목록 조회 범위를 제한한다. */
+    @Transactional(readOnly = true)
+    public List<CourseListItemResponse> list() {
+        return mapper.findCourses(authService.requireCurrentUser().userId());
+    }
 
     /** 코스 입력을 검증하고 새 코스를 저장한다. */
     @Transactional

@@ -1,14 +1,18 @@
 package com.allforland.orda.domain.course.mapper;
 
+import com.allforland.orda.domain.course.dto.CourseListItemResponse;
 import com.allforland.orda.domain.course.vo.CourseGeometryRow;
 import com.allforland.orda.domain.course.vo.CourseRow;
 import java.math.BigDecimal;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /** 코스 데이터 조회와 변경을 위한 MyBatis 매퍼다. */
 @Mapper
 public interface CourseMapper {
+    List<CourseListItemResponse> findCourses(@Param("ownerUserId") long ownerUserId);
+
     boolean activeMountainExists(@Param("mountainId") long mountainId);
 
     CourseRow findCourse(

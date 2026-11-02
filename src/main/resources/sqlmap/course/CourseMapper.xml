@@ -1,6 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.allforland.orda.domain.course.mapper.CourseMapper">
+  <resultMap id="courseListResult" type="com.allforland.orda.domain.course.dto.CourseListItemResponse">
+    <constructor>
+      <idArg column="course_id" javaType="java.lang.String"/>
+      <arg column="mountain_id" javaType="java.lang.String"/>
+      <arg column="mountain_nm" javaType="java.lang.String"/>
+      <arg column="course_nm" javaType="java.lang.String"/>
+      <arg column="memo" javaType="java.lang.String"/>
+      <arg column="create_type_cd" javaType="java.lang.String"/>
+      <arg column="length_m" javaType="java.math.BigDecimal"/>
+      <arg column="est_time_min" javaType="java.math.BigDecimal"/>
+    </constructor>
+  </resultMap>
+
+  <select id="findCourses" resultMap="courseListResult">
+    SELECT c.course_id::text, c.mountain_id::text, m.mountain_nm,
+           c.course_nm, c.memo, c.create_type_cd, c.length_m, c.est_time_min
+    FROM course c JOIN mountain m ON m.mountain_id = c.mountain_id
+    WHERE c.owner_user_id = #{ownerUserId} AND c.del_yn = 'N'
+    ORDER BY c.course_id DESC
+  </select>
+
   <resultMap id="courseResult" type="com.allforland.orda.domain.course.vo.CourseRow">
     <constructor>
       <idArg column="course_id" javaType="java.lang.Long"/>

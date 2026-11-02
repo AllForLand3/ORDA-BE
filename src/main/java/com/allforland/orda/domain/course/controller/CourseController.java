@@ -4,6 +4,7 @@ import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.course.dto.CourseCreateRequest;
 import com.allforland.orda.domain.course.dto.CourseDetailResponse;
+import com.allforland.orda.domain.course.dto.CourseListItemResponse;
 import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
 import com.allforland.orda.domain.course.service.CourseEditTagService;
 import com.allforland.orda.domain.course.service.CourseService;
@@ -31,6 +32,12 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class CourseController {
     private final CourseService service;
     private final CourseEditTagService editTags;
+
+    /** 현재 사용자의 삭제되지 않은 코스 목록을 조회한다. */
+    @GetMapping
+    public ResponseEntity<List<CourseListItemResponse>> list() {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.list());
+    }
 
     /** 코스 형상을 등록하고 상세 응답과 ETag를 반환한다. */
     @PostMapping
