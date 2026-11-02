@@ -5,6 +5,12 @@
                type="com.allforland.orda.domain.mountain.dto.MountainListItem">
         <result property="mountainId" column="mountain_id"/>
         <result property="mountainName" column="mountain_nm"/>
+        <result property="addressLabel" column="address_label"/>
+        <result property="provinceName" column="province_nm"/>
+        <result property="districtName" column="district_nm"/>
+        <result property="elevationMeters" column="elevation_m"/>
+        <result property="longitude" column="longitude"/>
+        <result property="latitude" column="latitude"/>
     </resultMap>
 
     <resultMap id="mountainDetailMap"
@@ -14,6 +20,12 @@
         <result property="sourceMountainCode" column="src_mntn_cd"/>
         <result property="sourceOldMountainCode" column="src_old_mntn_cd"/>
         <result property="serviceAvailable" column="service_available"/>
+        <result property="addressLabel" column="address_label"/>
+        <result property="provinceName" column="province_nm"/>
+        <result property="districtName" column="district_nm"/>
+        <result property="elevationMeters" column="elevation_m"/>
+        <result property="longitude" column="longitude"/>
+        <result property="latitude" column="latitude"/>
     </resultMap>
     
     <resultMap id="serviceAreaRowMap"
@@ -57,7 +69,13 @@
     <select id="findAll" resultMap="mountainListItemMap">
         SELECT
             m.mountain_id,
-            m.mountain_nm
+            m.mountain_nm,
+            m.address_label,
+            m.province_nm,
+            m.district_nm,
+            m.elevation_m,
+            ST_X(ST_Transform(m.representative_geom, 4326)) AS longitude,
+            ST_Y(ST_Transform(m.representative_geom, 4326)) AS latitude
         FROM mountain m
         <include refid="mountainSearchCondition"/>
         ORDER BY m.mountain_id
@@ -95,7 +113,13 @@
 			          OR ST_IsValid(sa.geom) IS DISTINCT FROM TRUE
 			          OR ST_IsEmpty(sa.geom) IS DISTINCT FROM FALSE
 			      )
-			) AS service_available
+			) AS service_available,
+            m.address_label,
+            m.province_nm,
+            m.district_nm,
+            m.elevation_m,
+            ST_X(ST_Transform(m.representative_geom, 4326)) AS longitude,
+            ST_Y(ST_Transform(m.representative_geom, 4326)) AS latitude
         FROM mountain m
         WHERE m.mountain_id = #{mountainId}
           AND m.use_yn = 'Y'
