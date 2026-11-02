@@ -3,6 +3,7 @@ package com.allforland.orda.domain.mountain.service;
 import com.allforland.orda.common.dto.PageResponse;
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
+import com.allforland.orda.common.geo.PointGeometry;
 import com.allforland.orda.domain.mountain.dto.MountainDetailResponse;
 import com.allforland.orda.domain.mountain.dto.MountainListItem;
 import com.allforland.orda.domain.mountain.dto.MountainSearchRequest;
@@ -48,6 +49,10 @@ public class MountainService {
         long offset = (long) page * size;
 
         List<MountainListItem> items = mountainMapper.findAll(request, size, offset);
+        items.forEach(
+                mountain ->
+                        mountain.setGeometry(
+                                point(mountain.getLongitude(), mountain.getLatitude())));
         long totalElements = mountainMapper.count(request);
 
         int totalPages = (int) ((totalElements + size - 1) / size);
@@ -70,6 +75,7 @@ public class MountainService {
             throw new BusinessException(ErrorCode.MOUNTAIN_NOT_FOUND);
         }
 
+        mountain.setGeometry(point(mountain.getLongitude(), mountain.getLatitude()));
         return mountain;
     }
 
@@ -137,6 +143,16 @@ public class MountainService {
                 || serviceArea.getGeometryJson() == null) {
             throw new BusinessException(ErrorCode.SERVICE_AREA_UNAVAILABLE);
         }
+    }
+
+    private PointGeometry point(Double longitude, Double latitude) {
+        if (longitude == null && latitude == null) {
+            return null;
+        }
+        if (longitude == null || latitude == null) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+        return new PointGeometry(longitude, latitude);
     }
 
     /*

@@ -1,5 +1,7 @@
 package com.allforland.orda.domain.mountain.dto;
 
+import com.allforland.orda.common.geo.PointGeometry;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +15,9 @@ public class MountainListItem {
     private String provinceName;
     private String districtName;
     private BigDecimal elevationMeters;
-    private Double longitude;
-    private Double latitude;
+    private PointGeometry geometry;
+
+    @JsonIgnore private Double longitude;
+
+    @JsonIgnore private Double latitude;
 }
