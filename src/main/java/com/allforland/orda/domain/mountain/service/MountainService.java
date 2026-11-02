@@ -1,12 +1,22 @@
 package com.allforland.orda.domain.mountain.service;
 
 import com.allforland.orda.common.dto.PageResponse;
+import com.allforland.orda.common.error.BusinessException;
+import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.mountain.dto.MountainDetailResponse;
 import com.allforland.orda.domain.mountain.dto.MountainListItem;
 import com.allforland.orda.domain.mountain.dto.MountainSearchRequest;
+import com.allforland.orda.domain.mountain.dto.ServiceAreaRow;
 import com.allforland.orda.domain.mountain.mapper.MountainMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.sql.SQLException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class MountainService {
 
+    private final ObjectMapper objectMapper;
     private final MountainMapper mountainMapper;
 
     /*
@@ -49,17 +60,83 @@ public class MountainService {
      *
      * @param mountainId 조회할 산 ID
      * @return 조회된 산의 상세 정보
-     * @throws ResponseStatusException 산 정보가 존재하지 않는 경우
+     * @throws BusinessException 활성 산 정보가 존재하지 않는 경우
      */
     public MountainDetailResponse getMountain(Long mountainId) {
 
         MountainDetailResponse mountain = mountainMapper.findById(mountainId);
 
         if (mountain == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "산 정보를 찾을 수 없습니다.");
+            throw new BusinessException(ErrorCode.MOUNTAIN_NOT_FOUND);
         }
 
         return mountain;
+    }
+
+    /*
+     * 산별 서비스 가능 영역을 GeoJSON FeatureCollection 형식으로 조회
+     *
+     * @param mountainId 조회할 산 ID
+     * @return 서비스 가능 영역 GeoJSON FeatureCollection
+     * @throws BusinessException 활성 산 또는 서비스 가능 영역이 존재하지 않는 경우
+     */
+    public JsonNode getServiceAreaGeoJson(Long mountainId) {
+        getMountain(mountainId);
+
+        List<ServiceAreaRow> serviceAreas;
+
+        try {
+            serviceAreas = mountainMapper.findServiceAreas(mountainId);
+        } catch (DataAccessException exception) {
+            if (isServiceAreaTransformFailure(exception)) {
+                throw new BusinessException(ErrorCode.SERVICE_AREA_UNAVAILABLE);
+            }
+
+            throw exception;
+        }
+
+        if (serviceAreas.isEmpty()) {
+            throw new BusinessException(ErrorCode.SERVICE_AREA_NOT_FOUND);
+        }
+
+        ObjectNode featureCollection = objectMapper.createObjectNode();
+        featureCollection.put("type", "FeatureCollection");
+
+        ArrayNode features = featureCollection.putArray("features");
+
+        for (ServiceAreaRow serviceArea : serviceAreas) {
+            validateServiceAreaGeometry(serviceArea);
+
+            try {
+                ObjectNode feature = objectMapper.createObjectNode();
+
+                feature.put("type", "Feature");
+                feature.put("id", serviceArea.getAreaId());
+                feature.set("geometry", objectMapper.readTree(serviceArea.getGeometryJson()));
+
+                ObjectNode properties = feature.putObject("properties");
+                properties.put("areaId", serviceArea.getAreaId());
+                properties.put("areaName", serviceArea.getAreaName());
+                properties.put("mountainId", serviceArea.getMountainId());
+                properties.put("datasetId", serviceArea.getDatasetId());
+
+                features.add(feature);
+            } catch (JsonProcessingException e) {
+                throw new IllegalStateException("서비스 가능 영역 GeoJSON 변환에 실패했습니다.", e);
+            }
+        }
+
+        return featureCollection;
+    }
+
+    private void validateServiceAreaGeometry(ServiceAreaRow serviceArea) {
+        if (!Integer.valueOf(5179).equals(serviceArea.getSourceSrid())
+                || !"ST_MultiPolygon".equals(serviceArea.getGeometryType())
+                || !Boolean.TRUE.equals(serviceArea.getGeometryValid())
+                || !Boolean.FALSE.equals(serviceArea.getGeometryEmpty())
+                || serviceArea.getGeometryJson() == null) {
+            throw new BusinessException(ErrorCode.SERVICE_AREA_UNAVAILABLE);
+        }
     }
 
     /*
@@ -112,5 +189,25 @@ public class MountainService {
                 || minLat >= maxLat) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 BBOX 좌표입니다.");
         }
+    }
+
+    /*
+     * 서비스 영역 좌표 변환 과정에서 발생한 PostGIS 오류인지 확인
+     * 좌표 변환 오류가 아닌 연결 실패, SQL 문법 오류, 스키마 오류 등의 데이터베이스 예외는 서비스 영역 오류로 변환하지 않음
+     *
+     * @param exception 서비스 영역 조회 중 발생한 데이터 접근 예외
+     * @return PostGIS 좌표 변환 오류면 {@code true}, 그렇지 않으면 {@code false}
+     */
+    private boolean isServiceAreaTransformFailure(DataAccessException exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sql
+                    && "XX000".equals(sql.getSQLState())
+                    && sql.getMessage() != null
+                    && sql.getMessage().contains("transform:")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -15,6 +15,19 @@
         <result property="sourceOldMountainCode" column="src_old_mntn_cd"/>
         <result property="serviceAvailable" column="service_available"/>
     </resultMap>
+    
+    <resultMap id="serviceAreaRowMap"
+	           type="com.allforland.orda.domain.mountain.dto.ServiceAreaRow">
+	    <id property="areaId" column="area_id"/>
+	    <result property="mountainId" column="mountain_id"/>
+	    <result property="datasetId" column="dataset_id"/>
+	    <result property="areaName" column="area_nm"/>
+	    <result property="geometryJson" column="geometry_json"/>
+	    <result property="sourceSrid" column="source_srid"/>
+	    <result property="geometryType" column="geometry_type"/>
+	    <result property="geometryValid" column="geometry_valid"/>
+	    <result property="geometryEmpty" column="geometry_empty"/>
+	</resultMap>
 
     <sql id="mountainSearchCondition">
         WHERE m.use_yn = 'Y'
@@ -64,15 +77,54 @@
             m.mountain_nm,
             m.src_mntn_cd,
             m.src_old_mntn_cd,
-            TRUE AS service_available
+            EXISTS (
+			    SELECT 1
+			    FROM service_area sa
+			    WHERE sa.mountain_id = m.mountain_id
+			      AND sa.use_yn = 'Y'
+			)
+			AND NOT EXISTS (
+			    SELECT 1
+			    FROM service_area sa
+			    WHERE sa.mountain_id = m.mountain_id
+			      AND sa.use_yn = 'Y'
+			      AND (
+			          sa.geom IS NULL
+			          OR ST_SRID(sa.geom) IS DISTINCT FROM 5179
+			          OR ST_GeometryType(sa.geom) IS DISTINCT FROM 'ST_MultiPolygon'
+			          OR ST_IsValid(sa.geom) IS DISTINCT FROM TRUE
+			          OR ST_IsEmpty(sa.geom) IS DISTINCT FROM FALSE
+			      )
+			) AS service_available
         FROM mountain m
         WHERE m.mountain_id = #{mountainId}
           AND m.use_yn = 'Y'
-          AND EXISTS (
-              SELECT 1
-              FROM service_area sa
-              WHERE sa.mountain_id = m.mountain_id
-                AND sa.use_yn = 'Y'
-          )
     </select>
+	
+	<select id="findServiceAreas" resultMap="serviceAreaRowMap">
+	    SELECT
+	        sa.area_id,
+	        sa.mountain_id,
+	        sa.dataset_id,
+	        sa.area_nm,
+	        ST_SRID(sa.geom) AS source_srid,
+	        ST_GeometryType(sa.geom) AS geometry_type,
+	        ST_IsValid(sa.geom) AS geometry_valid,
+	        ST_IsEmpty(sa.geom) AS geometry_empty,
+	        CASE
+	            WHEN sa.geom IS NOT NULL
+	             AND ST_SRID(sa.geom) = 5179
+	             AND ST_GeometryType(sa.geom) = 'ST_MultiPolygon'
+	             AND ST_IsValid(sa.geom)
+	             AND NOT ST_IsEmpty(sa.geom)
+	            THEN ST_AsGeoJSON(ST_Transform(sa.geom, 4326))
+	        END AS geometry_json
+	    FROM service_area sa
+	    JOIN mountain m
+	      ON m.mountain_id = sa.mountain_id
+	    WHERE sa.mountain_id = #{mountainId}
+	      AND sa.use_yn = 'Y'
+	      AND m.use_yn = 'Y'
+	    ORDER BY sa.area_id
+	</select>
 </mapper>

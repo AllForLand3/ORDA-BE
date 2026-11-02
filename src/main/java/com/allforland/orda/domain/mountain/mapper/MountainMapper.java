@@ -3,6 +3,7 @@ package com.allforland.orda.domain.mountain.mapper;
 import com.allforland.orda.domain.mountain.dto.MountainDetailResponse;
 import com.allforland.orda.domain.mountain.dto.MountainListItem;
 import com.allforland.orda.domain.mountain.dto.MountainSearchRequest;
+import com.allforland.orda.domain.mountain.dto.ServiceAreaRow;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -16,4 +17,6 @@ public interface MountainMapper {
     long count(@Param("request") MountainSearchRequest request);
 
     MountainDetailResponse findById(Long mountainId);
+
+    List<ServiceAreaRow> findServiceAreas(Long mountainId);
 }
