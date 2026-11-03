@@ -78,14 +78,27 @@
     </constructor>
   </resultMap>
 
+  <select id="countCourses" resultType="long">
+    SELECT count(*) FROM course
+    WHERE owner_user_id = #{ownerUserId} AND del_yn = 'N'
+  </select>
+
+  <!-- Service가 크기를 9로 고정한다. MATERIALIZED로 페이지를 확정한 뒤 해당 코스에만 공간 집계를 수행한다. -->
   <select id="findCourses" resultMap="courseListResult">
+    WITH page_courses AS MATERIALIZED (
+      SELECT course_id, mountain_id, course_nm, memo, create_type_cd,
+             length_m, est_time_min, frst_regist_dt, calc_difficulty_cd, geom
+      FROM course
+      WHERE owner_user_id = #{ownerUserId} AND del_yn = 'N'
+      ORDER BY course_id DESC
+      LIMIT #{limit} OFFSET #{offset}
+    )
     SELECT c.course_id::text, c.mountain_id::text, m.mountain_nm,
            c.course_nm, c.memo, c.create_type_cd, c.length_m, c.est_time_min,
            c.frst_regist_dt, c.calc_difficulty_cd,
            <include refid="courseNearbySummaryColumns"/>
-    FROM course c JOIN mountain m ON m.mountain_id = c.mountain_id
+    FROM page_courses c JOIN mountain m ON m.mountain_id = c.mountain_id
     <include refid="courseNearbySummaryJoins"/>
-    WHERE c.owner_user_id = #{ownerUserId} AND c.del_yn = 'N'
     ORDER BY c.course_id DESC
   </select>
 

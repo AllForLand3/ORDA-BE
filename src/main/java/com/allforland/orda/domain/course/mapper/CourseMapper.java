@@ -11,7 +11,12 @@ import org.apache.ibatis.annotations.Param;
 /** 코스 데이터 조회와 변경을 위한 MyBatis 매퍼다. */
 @Mapper
 public interface CourseMapper {
-    List<CourseListItemResponse> findCourses(@Param("ownerUserId") long ownerUserId);
+    long countCourses(@Param("ownerUserId") long ownerUserId);
+
+    List<CourseListItemResponse> findCourses(
+            @Param("ownerUserId") long ownerUserId,
+            @Param("limit") int limit,
+            @Param("offset") long offset);
 
     boolean activeMountainExists(@Param("mountainId") long mountainId);
 
