@@ -1,6 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.allforland.orda.domain.course.mapper.CourseMapper">
+  <resultMap id="courseNearbySummaryResult" type="com.allforland.orda.domain.course.dto.CourseNearbySummaryResponse">
+    <constructor>
+      <arg column="nearby_radius_m" javaType="_int"/>
+      <arg column="spot_data_available" javaType="_boolean"/>
+      <arg column="facility_data_available" javaType="_boolean"/>
+      <arg column="view_spot_count" javaType="java.lang.Long"/>
+      <arg column="stair_spot_count" javaType="java.lang.Long"/>
+      <arg column="toilet_count" javaType="java.lang.Long"/>
+      <arg column="parking_count" javaType="java.lang.Long"/>
+    </constructor>
+  </resultMap>
+
+  <!-- course 별칭 c가 있는 목록 SQL 안에서 조회 컬럼과 집계 조각을 함께 포함한다. -->
+  <sql id="courseNearbySummaryColumns">
+    nearby_settings.radius_m AS nearby_radius_m,
+    nearby_data.spot_data_available, nearby_data.facility_data_available,
+    CASE WHEN nearby_data.spot_data_available THEN nearby_spots.view_spot_count END AS view_spot_count,
+    CASE WHEN nearby_data.spot_data_available THEN nearby_spots.stair_spot_count END AS stair_spot_count,
+    CASE WHEN nearby_data.facility_data_available THEN nearby_facilities.toilet_count END AS toilet_count,
+    CASE WHEN nearby_data.facility_data_available THEN nearby_facilities.parking_count END AS parking_count
+  </sql>
+
+  <!-- 반경은 EPSG:5179 평면 최단거리 200m다. 지점과 시설을 독립 집계해 조인에 의한 중복을 방지한다. -->
+  <sql id="courseNearbySummaryJoins">
+    CROSS JOIN (SELECT 200 AS radius_m) nearby_settings
+    CROSS JOIN LATERAL (
+      SELECT EXISTS (
+        SELECT 1 FROM trail_spot s
+        WHERE s.mountain_id = c.mountain_id
+          AND s.dup_of_spot_id IS NULL AND s.verify_status_cd &lt;&gt; 'REJECTED'
+          AND EXISTS (
+            SELECT 1 FROM spot_tag t
+            WHERE t.spot_id = s.spot_id AND t.verify_status_cd &lt;&gt; 'REJECTED'
+          )
+      ) AS spot_data_available,
+      EXISTS (
+        SELECT 1 FROM facility f
+        WHERE f.mountain_id = c.mountain_id
+          AND f.dup_of_facility_id IS NULL AND f.verify_status_cd &lt;&gt; 'REJECTED'
+      ) AS facility_data_available
+    ) nearby_data
+    CROSS JOIN LATERAL (
+      SELECT count(DISTINCT s.spot_id) FILTER (WHERE t.tag_cd = 'VIEW') AS view_spot_count,
+             count(DISTINCT s.spot_id) FILTER (WHERE t.tag_cd = 'STAIR') AS stair_spot_count
+      FROM trail_spot s JOIN spot_tag t ON t.spot_id = s.spot_id
+      WHERE s.mountain_id = c.mountain_id
+        AND s.dup_of_spot_id IS NULL AND s.verify_status_cd &lt;&gt; 'REJECTED'
+        AND t.verify_status_cd &lt;&gt; 'REJECTED' AND t.tag_cd IN ('VIEW', 'STAIR')
+        AND ST_DWithin(s.geom, c.geom, nearby_settings.radius_m)
+    ) nearby_spots
+    CROSS JOIN LATERAL (
+      SELECT count(*) FILTER (WHERE f.fac_type_cd = 'TOILET') AS toilet_count,
+             count(*) FILTER (WHERE f.fac_type_cd = 'PARKING') AS parking_count
+      FROM facility f
+      WHERE f.mountain_id = c.mountain_id
+        AND f.dup_of_facility_id IS NULL AND f.verify_status_cd &lt;&gt; 'REJECTED'
+        AND ST_DWithin(f.geom, c.geom, nearby_settings.radius_m)
+    ) nearby_facilities
+  </sql>
+
   <resultMap id="courseListResult" type="com.allforland.orda.domain.course.dto.CourseListItemResponse">
     <constructor>
       <idArg column="course_id" javaType="java.lang.String"/>
@@ -11,13 +71,20 @@
       <arg column="create_type_cd" javaType="java.lang.String"/>
       <arg column="length_m" javaType="java.math.BigDecimal"/>
       <arg column="est_time_min" javaType="java.math.BigDecimal"/>
+      <arg column="frst_regist_dt" javaType="java.time.Instant"/>
+      <arg column="calc_difficulty_cd" javaType="java.lang.String"/>
+      <arg javaType="com.allforland.orda.domain.course.dto.CourseNearbySummaryResponse"
+           resultMap="courseNearbySummaryResult"/>
     </constructor>
   </resultMap>
 
   <select id="findCourses" resultMap="courseListResult">
     SELECT c.course_id::text, c.mountain_id::text, m.mountain_nm,
-           c.course_nm, c.memo, c.create_type_cd, c.length_m, c.est_time_min
+           c.course_nm, c.memo, c.create_type_cd, c.length_m, c.est_time_min,
+           c.frst_regist_dt, c.calc_difficulty_cd,
+           <include refid="courseNearbySummaryColumns"/>
     FROM course c JOIN mountain m ON m.mountain_id = c.mountain_id
+    <include refid="courseNearbySummaryJoins"/>
     WHERE c.owner_user_id = #{ownerUserId} AND c.del_yn = 'N'
     ORDER BY c.course_id DESC
   </select>
