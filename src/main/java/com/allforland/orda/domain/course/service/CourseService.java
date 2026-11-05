@@ -1,11 +1,13 @@
 package com.allforland.orda.domain.course.service;
 
+import com.allforland.orda.common.dto.PageResponse;
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.common.geo.LineStringGeometry;
 import com.allforland.orda.domain.auth.service.AuthService;
 import com.allforland.orda.domain.course.dto.CourseCreateRequest;
 import com.allforland.orda.domain.course.dto.CourseDetailResponse;
+import com.allforland.orda.domain.course.dto.CourseListItemResponse;
 import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
 import com.allforland.orda.domain.course.mapper.CourseMapper;
 import com.allforland.orda.domain.course.vo.CourseGeometryRow;
@@ -19,17 +21,39 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 코스 CRUD의 검증과 업무 규칙을 처리한다. */
 @Service
 @RequiredArgsConstructor
 public class CourseService {
+    private static final int LIST_PAGE_SIZE = 9;
     private static final BigDecimal MAXIMUM_LENGTH = new BigDecimal("99999999.9");
     private final CourseMapper mapper;
     private final AuthService authService;
     private final ObjectMapper objectMapper;
     private final CourseEditTagService editTags;
+
+    /** 전체 개수와 최대 9개의 코스·주변 집계를 동일 스냅샷에서 조회한다. */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public PageResponse<CourseListItemResponse> list(int page) {
+        if (page < 0) {
+            throw invalidRequest();
+        }
+        long owner = authService.requireCurrentUser().userId();
+        long totalElements = mapper.countCourses(owner);
+        int totalPages =
+                Math.toIntExact(
+                        totalElements / LIST_PAGE_SIZE
+                                + (totalElements % LIST_PAGE_SIZE == 0 ? 0 : 1));
+        long offset = (long) page * LIST_PAGE_SIZE;
+        List<CourseListItemResponse> items =
+                offset >= totalElements
+                        ? List.of()
+                        : mapper.findCourses(owner, LIST_PAGE_SIZE, offset);
+        return new PageResponse<>(items, page, LIST_PAGE_SIZE, totalElements, totalPages);
+    }
 
     /** 코스 입력을 검증하고 새 코스를 저장한다. */
     @Transactional
