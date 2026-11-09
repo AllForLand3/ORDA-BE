@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.allforland.orda.domain.analysis.mapper.DemAssetMapper">
-  <resultMap id="demAssetResult" type="com.allforland.orda.domain.analysis.vo.DemAssetRow">
+<mapper namespace="com.allforland.orda.domain.analysis.dem.mapper.DemAssetMapper">
+  <resultMap id="demAssetResult" type="com.allforland.orda.domain.analysis.dem.vo.DemAssetRow">
     <constructor>
       <idArg column="dem_id" javaType="java.lang.Long"/>
       <arg column="dataset_id" javaType="java.lang.Long"/>

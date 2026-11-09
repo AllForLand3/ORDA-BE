@@ -148,6 +148,9 @@ jobs:
         run: ./mvnw --batch-mode --no-transfer-progress package -DskipTests
 
       - name: Validate Docker Compose configuration
+        env:
+          # 구성 검사 전용 값이며 운영 DB의 저장 시간대는 배포 환경에서 지정한다.
+          ORDA_ANALYSIS_RESULT_TIME_ZONE: UTC
         run: docker compose --env-file .env.example config --quiet
 
       - name: Build Docker image

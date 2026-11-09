@@ -5,6 +5,7 @@ import com.allforland.orda.domain.mountain.dto.MountainDetailResponse;
 import com.allforland.orda.domain.mountain.dto.MountainListItem;
 import com.allforland.orda.domain.mountain.dto.MountainSearchRequest;
 import com.allforland.orda.domain.mountain.service.MountainService;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,5 +34,15 @@ public class MountainController {
     @GetMapping("/{mountainId}")
     public ResponseEntity<MountainDetailResponse> getMountain(@PathVariable Long mountainId) {
         return ResponseEntity.ok(mountainService.getMountain(mountainId));
+    }
+
+    @Operation(
+            summary = "산별 서비스 가능 영역 GeoJSON 조회",
+            description =
+                    "산 ID를 기준으로 활성화된 서비스 가능 영역을 조회합니다."
+                            + "공간 정보는 EPSG:4326 좌표계의 GeoJSON FeatureCollection 형식으로 반환합니다.")
+    @GetMapping("/{mountainId}/service-area")
+    public ResponseEntity<JsonNode> getServiceAreaJson(@PathVariable Long mountainId) {
+        return ResponseEntity.ok(mountainService.getServiceAreaGeoJson(mountainId));
     }
 }

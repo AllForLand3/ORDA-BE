@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.allforland.orda.domain.analysis.terrain.mapper.CourseAnalysisMapper">
+
+  <resultMap id="courseAnalysisSourceResult"
+             type="com.allforland.orda.domain.analysis.terrain.vo.CourseAnalysisSourceRow">
+    <constructor>
+      <idArg column="course_id" javaType="java.lang.Long"/>
+      <arg column="rev_no" javaType="java.lang.Integer"/>
+      <arg column="geometry_hex" javaType="java.lang.String"/>
+      <arg column="actual_length_m" javaType="java.lang.Double"/>
+      <arg column="geometry_valid" javaType="java.lang.Boolean"/>
+    </constructor>
+  </resultMap>
+
+  <select id="findSource"
+          resultMap="courseAnalysisSourceResult"
+          useCache="false">
+    WITH source AS (
+    SELECT c.course_id,
+    c.rev_no,
+    c.geom,
+    COALESCE(
+    ST_SRID(c.geom) = 5179
+    AND GeometryType(c.geom) = 'LINESTRING'
+    AND ST_NDims(c.geom) = 2
+    AND NOT ST_IsEmpty(c.geom)
+    AND ST_IsValid(c.geom),
+    false
+    ) AS geometry_valid
+    FROM public.course c
+    WHERE c.course_id = #{courseId}
+    AND c.owner_user_id = #{ownerUserId}
+    AND c.del_yn = 'N'
+    )
+    SELECT course_id,
+    rev_no,
+    CASE WHEN geometry_valid
+    THEN encode(ST_AsEWKB(geom), 'hex')
+    END AS geometry_hex,
+    CASE WHEN geometry_valid
+    THEN ST_Length(geom)
+    END AS actual_length_m,
+    geometry_valid
+    FROM source
+  </select>
+
+  <resultMap id="courseSamplePointResult"
+             type="com.allforland.orda.domain.analysis.terrain.vo.CourseSamplePoint">
+    <constructor>
+      <idArg column="seq_no" javaType="_int"/>
+      <arg column="distance_m" javaType="_double"/>
+      <arg column="longitude" javaType="_double"/>
+      <arg column="latitude" javaType="_double"/>
+    </constructor>
+  </resultMap>
+
+  <!-- 코스를 재조회하지 않고 소유권을 확인한 시점의 형상만 사용한다. -->
+  <select id="generateSamplePoints" resultMap="courseSamplePointResult" useCache="false">
+    WITH shape AS (
+      SELECT ST_GeomFromEWKB(decode(#{geometryHex}, 'hex')) AS geom
+    ), source AS (
+      SELECT geom, ST_Length(geom) AS length_m FROM shape
+    ), distances(seq_no, distance_m) AS (
+      VALUES
+      <foreach collection="distances" item="distance" index="index" separator=",">
+        (CAST(#{index} AS integer) + 1, CAST(#{distance} AS double precision))
+      </foreach>
+    ), points AS (
+      SELECT d.seq_no, d.distance_m,
+             ST_Transform(
+               CASE WHEN d.seq_no = 1 THEN ST_StartPoint(s.geom)
+                    WHEN d.seq_no = (SELECT MAX(seq_no) FROM distances) THEN ST_EndPoint(s.geom)
+                    ELSE ST_LineInterpolatePoint(s.geom, d.distance_m / s.length_m)
+               END, 4326
+             ) AS geom
+      FROM source s CROSS JOIN distances d
+    )
+    SELECT seq_no, distance_m, ST_X(geom) AS longitude, ST_Y(geom) AS latitude
+    FROM points
+    ORDER BY seq_no
+  </select>
+
+  <select id="lockOwnedCourse"
+          resultType="java.lang.Long"
+          useCache="false"
+          flushCache="true">
+    SELECT course_id
+    FROM public.course
+    WHERE course_id = #{courseId}
+    AND owner_user_id = #{ownerUserId}
+    AND del_yn = 'N'
+    FOR SHARE
+  </select>
+
+</mapper>

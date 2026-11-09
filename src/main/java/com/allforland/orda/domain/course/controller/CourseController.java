@@ -1,9 +1,11 @@
 package com.allforland.orda.domain.course.controller;
 
+import com.allforland.orda.common.dto.PageResponse;
 import com.allforland.orda.common.error.BusinessException;
 import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.course.dto.CourseCreateRequest;
 import com.allforland.orda.domain.course.dto.CourseDetailResponse;
+import com.allforland.orda.domain.course.dto.CourseListItemResponse;
 import com.allforland.orda.domain.course.dto.CourseUpdateRequest;
 import com.allforland.orda.domain.course.service.CourseEditTagService;
 import com.allforland.orda.domain.course.service.CourseService;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -31,6 +34,13 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class CourseController {
     private final CourseService service;
     private final CourseEditTagService editTags;
+
+    /** 현재 사용자의 미삭제 코스를 페이지당 최대 9개 조회한다. 페이지 번호는 0부터 시작한다. */
+    @GetMapping
+    public ResponseEntity<PageResponse<CourseListItemResponse>> list(
+            @RequestParam(value = "page", defaultValue = "0") int page) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.list(page));
+    }
 
     /** 코스 형상을 등록하고 상세 응답과 ETag를 반환한다. */
     @PostMapping
