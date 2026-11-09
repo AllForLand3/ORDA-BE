@@ -190,12 +190,14 @@
     SELECT EXISTS (SELECT 1 FROM mountain WHERE mountain_id = #{mountainId} AND use_yn = 'Y')
   </select>
 
-  <!-- 경로 탐색은 통행 가능 간선(pass_yn = 'Y')만 쓰므로 후보 간선도 같은 조건으로 확인한다. -->
+  <!-- 경로 탐색은 통행 가능 간선(pass_yn = 'Y')만 쓰므로 후보 간선도 같은 조건으로 확인한다.
+       빈 형상 간선은 주변 결과가 0건인 것처럼 보이게 하므로 잘못된 후보로 본다. -->
   <select id="countRouteEdges" resultType="int">
     SELECT count(*)::integer
     FROM trail_edge e
     WHERE e.mountain_id = #{mountainId}
       AND e.pass_yn = 'Y'
+      AND NOT ST_IsEmpty(e.geom)
       AND e.edge_id IN
         <foreach collection="edgeIds" item="edgeId" open="(" separator="," close=")">#{edgeId}</foreach>
   </select>

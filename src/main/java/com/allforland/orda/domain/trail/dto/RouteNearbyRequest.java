@@ -43,6 +43,7 @@ public class RouteNearbyRequest {
                 radius(body.get("radiusM")));
     }
 
+    /** 값이 없으면 null, JSON 문자열이면 그 값을 반환하고 그 밖의 타입은 거부한다. */
     private static String text(JsonNode value) {
         if (value == null || value.isNull()) {
             return null;
@@ -53,6 +54,7 @@ public class RouteNearbyRequest {
         return value.textValue();
     }
 
+    /** 값이 없으면 null, 모든 원소가 JSON 문자열인 배열이면 목록을 반환하고 그 밖에는 거부한다. */
     private static List<String> edgeIds(JsonNode value) {
         if (value == null || value.isNull()) {
             return null;
@@ -70,6 +72,7 @@ public class RouteNearbyRequest {
         return List.copyOf(ids);
     }
 
+    /** 값이 없으면 null, int 범위의 JSON 정수이면 그 값을 반환하고 소수·문자열 등은 거부한다. */
     private static Integer radius(JsonNode value) {
         if (value == null || value.isNull()) {
             return null;
