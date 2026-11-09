@@ -186,6 +186,68 @@
     ORDER BY distance_m, f.facility_id
   </select>
 
+  <select id="activeMountainExists" resultType="boolean">
+    SELECT EXISTS (SELECT 1 FROM mountain WHERE mountain_id = #{mountainId} AND use_yn = 'Y')
+  </select>
+
+  <!-- 경로 탐색은 통행 가능 간선(pass_yn = 'Y')만 쓰므로 후보 간선도 같은 조건으로 확인한다. -->
+  <select id="countRouteEdges" resultType="int">
+    SELECT count(*)::integer
+    FROM trail_edge e
+    WHERE e.mountain_id = #{mountainId}
+      AND e.pass_yn = 'Y'
+      AND e.edge_id IN
+        <foreach collection="edgeIds" item="edgeId" open="(" separator="," close=")">#{edgeId}</foreach>
+  </select>
+
+  <!-- 후보 경로선: 요청 간선을 하나의 EPSG:5179 MultiLineString으로 모은다. 거리 계산에는 순서가 필요 없다. -->
+  <sql id="routeLine">
+    SELECT ST_Collect(e.geom) AS geom
+    FROM trail_edge e
+    WHERE e.mountain_id = #{mountainId}
+      AND e.edge_id IN
+        <foreach collection="edgeIds" item="edgeId" open="(" separator="," close=")">#{edgeId}</foreach>
+  </sql>
+
+  <!-- 거리는 EPSG:5179 후보 경로선과 지점 사이의 평면 최단거리(m)다.
+       visibleTaggedSpot의 태그·검수 필터는 이 조회에서 쓰지 않으므로 null로 둔다. -->
+  <select id="findRouteNearbySpots" resultMap="nearbySpotResult">
+    <bind name="tag" value="null"/>
+    <bind name="verifyStatus" value="null"/>
+    WITH route AS (<include refid="routeLine"/>)
+    SELECT s.spot_id, s.src_class_nm, s.detail_txt,
+           ROUND(ST_Distance(r.geom, s.geom)::numeric, 1) AS distance_m,
+           (SELECT MIN(m.dist_m)
+            FROM spot_edge_match m
+            WHERE m.spot_id = s.spot_id AND m.match_status_cd &lt;&gt; 'REJECTED') AS match_distance_m,
+           s.verify_status_cd,
+           ST_X(ST_Transform(s.geom, 4326)) AS longitude,
+           ST_Y(ST_Transform(s.geom, 4326)) AS latitude
+    FROM route r
+    JOIN trail_spot s
+      ON s.mountain_id = #{mountainId}
+     AND ST_DWithin(r.geom, s.geom, #{radiusM})
+    WHERE <include refid="visibleTaggedSpot"/>
+    ORDER BY distance_m, s.spot_id
+  </select>
+
+  <!-- 거리는 EPSG:5179 후보 경로선과 시설 사이의 평면 최단거리(m)다. -->
+  <select id="findRouteNearbyFacilities" resultMap="nearbyFacilityResult">
+    WITH route AS (<include refid="routeLine"/>)
+    SELECT f.facility_id, f.fac_type_cd, f.fac_nm, f.addr,
+           ROUND(ST_Distance(r.geom, f.geom)::numeric, 1) AS distance_m,
+           f.loc_basis_cd, f.verify_status_cd,
+           ST_X(ST_Transform(f.geom, 4326)) AS longitude,
+           ST_Y(ST_Transform(f.geom, 4326)) AS latitude
+    FROM route r
+    JOIN facility f
+      ON f.mountain_id = #{mountainId}
+     AND ST_DWithin(r.geom, f.geom, #{radiusM})
+    WHERE f.dup_of_facility_id IS NULL
+      AND f.verify_status_cd &lt;&gt; 'REJECTED'
+    ORDER BY distance_m, f.facility_id
+  </select>
+
   <select id="findSpot" resultMap="spotDetailResult">
     SELECT s.spot_id, s.mountain_id, s.dataset_id, s.src_spot_id, s.src_class_nm,
            s.detail_txt, s.etc_txt, s.verify_status_cd, s.dup_of_spot_id,

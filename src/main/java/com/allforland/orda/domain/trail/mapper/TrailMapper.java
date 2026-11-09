@@ -44,6 +44,24 @@ public interface TrailMapper {
             @Param("radiusM") int radiusM,
             @Param("type") String type);
 
+    /** 사용 중인 산인지 확인한다. */
+    boolean activeMountainExists(@Param("mountainId") long mountainId);
+
+    /** 요청 간선 중 해당 산에 속한 통행 가능 간선 수를 센다. */
+    int countRouteEdges(@Param("mountainId") long mountainId, @Param("edgeIds") List<Long> edgeIds);
+
+    /** 후보 간선 반경 안에서 조회 가능한 태그를 가진 대표 상세지점을 거리순으로 조회한다. */
+    List<NearbySpotRow> findRouteNearbySpots(
+            @Param("mountainId") long mountainId,
+            @Param("edgeIds") List<Long> edgeIds,
+            @Param("radiusM") int radiusM);
+
+    /** 후보 간선 반경 안의 대표 시설을 거리순으로 조회한다. */
+    List<NearbyFacilityRow> findRouteNearbyFacilities(
+            @Param("mountainId") long mountainId,
+            @Param("edgeIds") List<Long> edgeIds,
+            @Param("radiusM") int radiusM);
+
     SpotDetailRow findSpot(@Param("spotId") long spotId);
 
     List<SpotMatchRow> findSpotMatches(@Param("spotId") long spotId);

@@ -5,6 +5,8 @@ import com.allforland.orda.common.error.ErrorCode;
 import com.allforland.orda.domain.trail.dto.FacilityDetailResponse;
 import com.allforland.orda.domain.trail.dto.NearbyFacilitiesResponse;
 import com.allforland.orda.domain.trail.dto.NearbySpotsResponse;
+import com.allforland.orda.domain.trail.dto.RouteNearbyRequest;
+import com.allforland.orda.domain.trail.dto.RouteNearbyResponse;
 import com.allforland.orda.domain.trail.dto.TrailSpotDetailResponse;
 import com.allforland.orda.domain.trail.service.TrailQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,10 +16,12 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 코스 주변 상세지점·시설과 단건 상세 조회 HTTP 요청을 처리한다. */
+/** 코스·경로 탐색 후보 주변 상세지점·시설과 단건 상세 조회 HTTP 요청을 처리한다. */
 @RestController
 @RequiredArgsConstructor
 public class TrailController {
@@ -67,6 +71,21 @@ public class TrailController {
                     String type) {
         NearbyFacilitiesResponse response =
                 service.findNearbyFacilities(positiveId(courseId), revNo, radiusM, type);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(response);
+    }
+
+    /** 저장 전 경로 탐색 후보 반경 안의 상세지점·시설을 거리순으로 조회한다. */
+    @Operation(
+            summary = "경로 탐색 후보 주변 상세지점·시설 조회",
+            description =
+                    "경로 탐색 응답 후보의 edgeIds로 후보 경로선을 만들고, 반경 안의 태그 상세지점(spots)과"
+                            + " 화장실·주차장(facilities)을 거리순으로 조회합니다. radiusM은 기본 200, 허용 1~500입니다."
+                            + " 간선이 없거나 다른 산 간선·통행 불가 간선이 있으면 400입니다."
+                            + " spots·facilities의 counts·dataAvailable·items 의미는 코스 주변 조회와 같습니다.")
+    @PostMapping("/routes/nearby")
+    public ResponseEntity<RouteNearbyResponse> getRouteNearby(
+            @RequestBody RouteNearbyRequest request) {
+        RouteNearbyResponse response = service.findRouteNearby(request);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(response);
     }
 
