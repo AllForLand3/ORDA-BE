@@ -20,12 +20,24 @@ import lombok.experimental.Accessors;
         isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         setterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonInclude(JsonInclude.Include.ALWAYS)
-@JsonPropertyOrder({"rank", "priorityCondition", "lengthM", "estTimeMin", "edgeIds", "geometry"})
+@JsonPropertyOrder({
+    "rank",
+    "priorityCondition",
+    "lengthM",
+    "estTimeMin",
+    "stairCount",
+    "edgeIds",
+    "geometry"
+})
 public class RouteCandidateResponse {
     private final int rank;
     private final String priorityCondition;
     private final BigDecimal lengthM;
     private final BigDecimal estTimeMin;
+
+    /** 경로가 지나는 구간의 계단 지점 수 합계(trail_edge.stair_spot_cnt). 주변 반경 조회 수와 다르다. */
+    private final int stairCount;
+
     private final List<String> edgeIds;
     private final LineStringGeometry geometry;
 }

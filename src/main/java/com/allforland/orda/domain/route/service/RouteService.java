@@ -13,8 +13,11 @@ import com.allforland.orda.domain.route.vo.RouteSnapRow;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -24,21 +27,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RouteService {
     private static final String DIST_FIRST = "DIST_FIRST";
+    private static final String LESS_STAIR = "LESS_STAIR";
+    // 요청 순서와 관계없이 이 순서로 탐색하고 순위를 매긴다.
+    private static final List<String> SUPPORTED_CONDITIONS = List.of(DIST_FIRST, LESS_STAIR);
     private static final String DECIMAL = "[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?";
     private final RouteMapper mapper;
     private final ObjectMapper objectMapper;
     private final double snapMaxDistanceM;
+    private final double stairPenaltyM;
 
     public RouteService(
             RouteMapper mapper,
             ObjectMapper objectMapper,
-            @Value("${orda.route.snap-max-distance-m:300}") double snapMaxDistanceM) {
+            @Value("${orda.route.snap-max-distance-m:300}") double snapMaxDistanceM,
+            @Value("${orda.route.stair-penalty-m:300}") double stairPenaltyM) {
         if (!Double.isFinite(snapMaxDistanceM) || snapMaxDistanceM <= 0) {
             throw new IllegalArgumentException("orda.route.snap-max-distance-m must be positive");
+        }
+        if (!Double.isFinite(stairPenaltyM) || stairPenaltyM <= 0) {
+            throw new IllegalArgumentException("orda.route.stair-penalty-m must be positive");
         }
         this.mapper = mapper;
         this.objectMapper = objectMapper;
         this.snapMaxDistanceM = snapMaxDistanceM;
+        this.stairPenaltyM = stairPenaltyM;
     }
 
     /** 좌표에서 허용 거리 안의 가장 가까운 통행 가능 노드를 찾는다. */
@@ -75,7 +87,7 @@ public class RouteService {
                 List.of(node.longitude(), node.latitude()));
     }
 
-    /** 출발·도착 노드를 검증하고 거리 우선 경로 후보를 반환한다. */
+    /** 출발·도착 노드를 검증하고 요청한 탐색 기준별 경로 후보를 반환한다. */
     @Transactional(readOnly = true)
     public RouteSearchResponse search(RouteSearchRequest request) {
         if (request == null) {
@@ -84,6 +96,7 @@ public class RouteService {
         long mountainId = positiveId(request.mountainId());
         long startNodeId = positiveId(request.startNodeId());
         long endNodeId = positiveId(request.endNodeId());
+        List<String> conditions = priorityConditions(request.priorityConditions());
         if (startNodeId == endNodeId) {
             throw new BusinessException(ErrorCode.ROUTE_SAME_POINT);
         }
@@ -94,25 +107,59 @@ public class RouteService {
         if (mapper.countMountainNodes(mountainId, startNodeId, endNodeId) != 2) {
             throw new BusinessException(ErrorCode.ROUTE_NODE_NOT_FOUND);
         }
-        RoutePathRow path = mapper.findShortestPath(startNodeId, endNodeId);
-        if (path == null || path.edgeCount() == null || path.edgeCount() < 1) {
-            throw new BusinessException(ErrorCode.ROUTE_NOT_FOUND);
+        List<RouteCandidateResponse> candidates = new ArrayList<>();
+        Set<List<String>> seenPaths = new HashSet<>();
+        for (String condition : conditions) {
+            double penalty = LESS_STAIR.equals(condition) ? stairPenaltyM : 0;
+            RoutePathRow path = mapper.findShortestPath(startNodeId, endNodeId, penalty);
+            if (path == null || path.edgeCount() == null || path.edgeCount() < 1) {
+                // 비용만 다를 뿐 같은 간선 집합을 쓰므로 한 기준에서 경로가 없으면 모두 없다.
+                throw new BusinessException(ErrorCode.ROUTE_NOT_FOUND);
+            }
+            List<String> edgeIds = edgeIds(path);
+            // 다른 기준과 같은 경로면 앞 순위 후보 하나만 남긴다.
+            if (seenPaths.add(edgeIds)) {
+                candidates.add(candidate(candidates.size() + 1, condition, path, edgeIds));
+            }
         }
         return new RouteSearchResponse(
                 Long.toString(mountainId),
                 Long.toString(startNodeId),
                 Long.toString(endNodeId),
-                List.of(candidate(path)));
+                List.copyOf(candidates));
     }
 
-    /** 탐색 결과 행을 검증해 경로 후보 응답으로 변환한다. */
-    private RouteCandidateResponse candidate(RoutePathRow path) {
-        if (path.edgeIds() == null || path.lengthM() == null || path.geometryJson() == null) {
+    /** 탐색 기준 목록을 검증하고 탐색 순서대로 정렬한다. 없거나 비어 있으면 거리 우선만 쓴다. */
+    private List<String> priorityConditions(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of(DIST_FIRST);
+        }
+        Set<String> requested = new HashSet<>();
+        for (String value : values) {
+            if (value == null || !SUPPORTED_CONDITIONS.contains(value) || !requested.add(value)) {
+                throw invalidRequest();
+            }
+        }
+        return SUPPORTED_CONDITIONS.stream().filter(requested::contains).toList();
+    }
+
+    /** 탐색 결과 행의 간선 ID 목록을 검증해 반환한다. */
+    private List<String> edgeIds(RoutePathRow path) {
+        if (path.edgeIds() == null) {
             throw new IllegalStateException("Incomplete route path result");
         }
         List<String> edgeIds = Arrays.asList(path.edgeIds().split(","));
         if (edgeIds.size() != path.edgeCount()) {
             throw new IllegalStateException("Inconsistent route path result");
+        }
+        return List.copyOf(edgeIds);
+    }
+
+    /** 탐색 결과 행을 검증해 경로 후보 응답으로 변환한다. */
+    private RouteCandidateResponse candidate(
+            int rank, String condition, RoutePathRow path, List<String> edgeIds) {
+        if (path.lengthM() == null || path.stairCount() == null || path.geometryJson() == null) {
+            throw new IllegalStateException("Incomplete route path result");
         }
         LineStringGeometry geometry;
         try {
@@ -121,7 +168,13 @@ public class RouteService {
             throw new IllegalStateException("Invalid route path geometry");
         }
         return new RouteCandidateResponse(
-                1, DIST_FIRST, path.lengthM(), path.estTimeMin(), List.copyOf(edgeIds), geometry);
+                rank,
+                condition,
+                path.lengthM(),
+                path.estTimeMin(),
+                path.stairCount(),
+                edgeIds,
+                geometry);
     }
 
     /** 양의 long 범위의 10진 식별자를 검증한다. */

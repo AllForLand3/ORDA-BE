@@ -42,6 +42,8 @@ orda:
   route:
     # 스냅 허용 거리 기준 확정 전 임시 값
     snap-max-distance-m: ${ORDA_ROUTE_SNAP_MAX_DISTANCE_M:300}
+    # 계단 적은 길 탐색에서 계단 1곳을 몇 m 거리로 볼지 정하는 임시 값
+    stair-penalty-m: ${ORDA_ROUTE_STAIR_PENALTY_M:300}
 server:
   error:
     include-message: never

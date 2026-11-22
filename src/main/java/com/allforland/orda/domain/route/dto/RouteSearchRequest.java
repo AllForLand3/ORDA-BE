@@ -1,6 +1,7 @@
 package com.allforland.orda.domain.route.dto;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,4 +22,7 @@ public class RouteSearchRequest {
     private String startNodeId;
 
     private String endNodeId;
+
+    /** 탐색 기준 코드 목록. 없거나 비어 있으면 거리 우선만 탐색한다. */
+    private List<String> priorityConditions;
 }

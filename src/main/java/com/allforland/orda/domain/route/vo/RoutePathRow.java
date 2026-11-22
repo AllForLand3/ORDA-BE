@@ -14,5 +14,6 @@ public class RoutePathRow {
     private final String edgeIds;
     private final BigDecimal lengthM;
     private final BigDecimal estTimeMin;
+    private final Integer stairCount;
     private final String geometryJson;
 }

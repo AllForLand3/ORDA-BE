@@ -16,7 +16,9 @@ public interface RouteMapper {
             @Param("endNodeId") long endNodeId);
 
     RoutePathRow findShortestPath(
-            @Param("startNodeId") long startNodeId, @Param("endNodeId") long endNodeId);
+            @Param("startNodeId") long startNodeId,
+            @Param("endNodeId") long endNodeId,
+            @Param("stairPenaltyM") double stairPenaltyM);
 
     RouteSnapRow findNearestNode(
             @Param("mountainId") long mountainId,

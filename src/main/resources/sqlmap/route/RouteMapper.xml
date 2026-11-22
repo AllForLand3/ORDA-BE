@@ -17,12 +17,15 @@
       <arg column="edge_ids" javaType="java.lang.String"/>
       <arg column="length_m" javaType="java.math.BigDecimal"/>
       <arg column="est_time_min" javaType="java.math.BigDecimal"/>
+      <arg column="stair_count" javaType="java.lang.Integer"/>
       <arg column="geometry_json" javaType="java.lang.String"/>
     </constructor>
   </resultMap>
 
-  <!-- The pgr_dijkstra edge SQL is a fixed literal; user values are bound only as outer parameters.
-       Both directions cost length_m, and only passable edges (pass_yn = 'Y') are loaded.
+  <!-- The pgr_dijkstra edge SQL is a fixed template; user values are bound only as outer parameters.
+       The only value formatted into it is stairPenaltyM, a server setting bound as float8.
+       Both directions cost length_m + stairPenaltyM * stair_spot_cnt (0 for distance first),
+       and only passable edges (pass_yn = 'Y') are loaded.
        pgr_dijkstra's node is where each edge starts in traversal order, so node = source_node_id
        means the edge is traversed source -> target. Geometry stays in EPSG:5179 until the final
        ST_Transform to EPSG:4326 for the API. A missing time on any edge yields a NULL total. -->
@@ -30,13 +33,16 @@
     WITH path AS (
       SELECT d.path_seq, d.node, d.edge
       FROM pgr_dijkstra(
-        'SELECT edge_id AS id, source_node_id AS source, target_node_id AS target,
-                length_m::double precision AS cost, length_m::double precision AS reverse_cost
-         FROM trail_edge WHERE pass_yn = ''Y''',
+        format(
+          'SELECT edge_id AS id, source_node_id AS source, target_node_id AS target,
+                  (length_m + %1$s * stair_spot_cnt)::double precision AS cost,
+                  (length_m + %1$s * stair_spot_cnt)::double precision AS reverse_cost
+           FROM trail_edge WHERE pass_yn = ''Y''',
+          #{stairPenaltyM}::double precision),
         #{startNodeId}::bigint, #{endNodeId}::bigint, true) d
       WHERE d.edge &lt;&gt; -1
     ), traversed AS (
-      SELECT p.path_seq, e.edge_id, e.length_m,
+      SELECT p.path_seq, e.edge_id, e.length_m, e.stair_spot_cnt,
              CASE WHEN p.node = e.source_node_id THEN e.fwd_time_min ELSE e.rev_time_min END
                AS time_min,
              CASE WHEN p.node = e.source_node_id THEN e.geom ELSE ST_Reverse(e.geom) END AS geom
@@ -47,6 +53,7 @@
            string_agg(t.edge_id::text, ',' ORDER BY t.path_seq) AS edge_ids,
            round(sum(t.length_m), 1) AS length_m,
            CASE WHEN bool_and(t.time_min IS NOT NULL) THEN sum(t.time_min) END AS est_time_min,
+           sum(t.stair_spot_cnt)::integer AS stair_count,
            ST_AsGeoJSON(ST_Transform(ST_MakeLine(t.geom ORDER BY t.path_seq), 4326), 7, 0)
              AS geometry_json
     FROM traversed t
