@@ -1681,7 +1681,7 @@ $$;
 -- 대상 좌표계: EPSG:5179
 --
 -- 생성 원칙:
---   * 신규 빈 DB에서 01, 02 시드 다음에 한 번 실행한다.
+--   * 이 파일에서 산과 원천 등산로를 적재한 다음 한 번 실행한다.
 --   * 기존 trail_edge 또는 trail_node가 있으면 참조 데이터와 장소 연결을 보호하기 위해 중단한다.
 --   * use_yn = 'Y'인 모든 raw_trail을 대상으로 한다.
 --   * raw trail을 모든 교차점에서 분할하고 분할 구간의 끝점을 노드 후보로 사용한다.
@@ -1736,7 +1736,7 @@ BEGIN
       AND use_yn = 'Y';
 
     IF active_raw_trail_count = 0 THEN
-        RAISE EXCEPTION 'mountain_id 2의 활성 raw_trail이 없습니다.';
+        RAISE EXCEPTION '현재 산의 활성 raw_trail이 없습니다.';
     END IF;
 
     IF EXISTS (
@@ -1746,7 +1746,7 @@ BEGIN
           AND use_yn = 'Y'
           AND ST_IsEmpty(geom)
     ) THEN
-        RAISE EXCEPTION 'mountain_id 2의 활성 raw_trail에 빈 geometry가 있습니다.';
+        RAISE EXCEPTION '현재 산의 활성 raw_trail에 빈 geometry가 있습니다.';
     END IF;
 END
 $$;
@@ -2222,7 +2222,7 @@ $$;
 -- 생성된 네트워크에서 서비스 가능 영역을 만든다.
 -- 북한산 서비스 가능 영역 생성
 --
--- bukhan_seed.sql 실행 후 생성된 통행 가능 trail_edge를 기준으로 한다.
+-- 이 파일 앞부분에서 생성된 통행 가능 trail_edge를 기준으로 한다.
 -- EPSG:5179의 거리 단위를 사용해 등산로 양쪽 200m를 서비스 가능 영역으로 잡고,
 -- 버퍼 결합 과정에서 생긴 내부 구멍은 외곽 링만 다시 폴리곤으로 만들어 제거한다.
 -- mountain_id와 dataset_id는 환경마다 달라질 수 있으므로 이름으로 조회한다.
@@ -2271,12 +2271,12 @@ BEGIN
 
     IF edge_count = 0 THEN
         RAISE EXCEPTION
-            '북한산 통행 가능 trail_edge가 없습니다. bukhan_seed.sql을 먼저 실행하세요.';
+            '북한산 통행 가능 trail_edge가 없습니다. 이 파일 앞부분의 네트워크 생성 결과를 확인하세요.';
     END IF;
 END
 $$;
 
--- 01 시드의 고정 폴리곤 메타데이터를 현재 파생 규칙에 맞게 갱신한다.
+-- 서비스 영역 데이터셋 메타데이터를 현재 파생 규칙에 맞게 갱신한다.
 -- 결과 형상은 현재 trail_edge에서 매번 계산되므로 고정 파일 해시는 사용하지 않는다.
 UPDATE public.source_dataset
 SET file_nm = 'bukhan_seed.sql',
@@ -2456,8 +2456,8 @@ ON CONFLICT (spot_id, tag_cd) DO NOTHING;
 -- 대상 좌표계: EPSG:5179
 
 
--- 이 파일보다 01~05 시드를 먼저 실행해야 한다.
--- trail_edge 는 03 시드가 생성하며 edge_id 는 시퀀스 값이므로, 이 파일은 edge_id 를 고정하지 않고
+-- 이 파일 앞부분에서 생성한 네트워크와 상세지점을 사용한다.
+-- trail_edge의 edge_id는 시퀀스 값이므로 이 파일은 edge_id를 고정하지 않고
 -- 실행 시점의 geometry 로 가장 가까운 구간을 계산한다. 다시 실행해도 같은 행이 중복되지 않는다.
 --
 -- 매칭 원칙:
@@ -2468,7 +2468,7 @@ ON CONFLICT (spot_id, tag_cd) DO NOTHING;
 --   * 이미 매칭이 있는 지점(수동 보정 포함)은 건드리지 않는다.
 --   * 검수 전이므로 match_type_cd, match_status_cd 는 AUTO 이다.
 
--- 03 네트워크 시드와 동시에 실행되지 않도록 같은 트랜잭션 잠금을 건다.
+-- 같은 산의 네트워크 작업과 동시에 실행되지 않도록 같은 트랜잭션 잠금을 건다.
 SELECT pg_advisory_xact_lock(5179, current_setting('orda.seed.mountain_id')::integer);
 
 -- 선행 데이터가 없으면 아무것도 넣지 않고 중단한다.
@@ -2480,7 +2480,7 @@ BEGIN
     SELECT count(*) INTO edge_cnt FROM public.trail_edge WHERE mountain_id = current_setting('orda.seed.mountain_id')::integer;
     SELECT count(*) INTO spot_cnt FROM public.trail_spot WHERE mountain_id = current_setting('orda.seed.mountain_id')::integer;
     IF edge_cnt = 0 OR spot_cnt = 0 THEN
-        RAISE EXCEPTION '선행 시드 누락: trail_edge %, trail_spot %', edge_cnt, spot_cnt;
+        RAISE EXCEPTION '선행 데이터 누락: trail_edge %, trail_spot %', edge_cnt, spot_cnt;
     END IF;
 END
 $$;
