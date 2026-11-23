@@ -2158,12 +2158,14 @@ WHERE node.mountain_id = current_setting('orda.seed.mountain_id')::integer
 WITH connected AS (
     SELECT component, node
     FROM pgr_connectedComponents(
-        'SELECT edge_id AS id,
+    	$edges$
+        SELECT edge_id AS id,
                 source_node_id AS source,
                 target_node_id AS target,
                 length_m::float8 AS cost
-         FROM public.trail_edge
-         WHERE mountain_id = current_setting('orda.seed.mountain_id')::integer'
+        FROM public.trail_edge
+        WHERE mountain_id = current_setting('orda.seed.mountain_id')::integer
+        $edges$
     )
 ),
 ranked AS (
