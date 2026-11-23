@@ -1221,6 +1221,46 @@ BEGIN
     END IF;
 END
 $$;
+
+-- 경로 탐색의 출발·도착 후보인 시종점이 서로 도달 가능한지 검증한다.
+-- 시종점은 가장 가까운 edge에 매칭되므로 해당 edge의 source 노드 component_no로
+-- 연결요소를 판정한다. 시종점이 추가되더라도 모든 후보가 서로 경로 탐색 가능해야 한다.
+DO $$
+DECLARE
+    terminal_spot_count bigint;
+    terminal_component_count bigint;
+BEGIN
+    SELECT
+        COUNT(DISTINCT spot.spot_id),
+        COUNT(DISTINCT source_node.component_no)
+    INTO terminal_spot_count, terminal_component_count
+    FROM public.trail_spot AS spot
+    JOIN public.spot_edge_match AS match
+      ON match.spot_id = spot.spot_id
+     AND match.match_status_cd <> 'REJECTED'
+    JOIN public.trail_edge AS edge
+      ON edge.edge_id = match.edge_id
+     AND edge.mountain_id = spot.mountain_id
+    JOIN public.trail_node AS source_node
+      ON source_node.node_id = edge.source_node_id
+     AND source_node.mountain_id = edge.mountain_id
+    WHERE spot.mountain_id = current_setting('orda.seed.mountain_id')::integer
+      AND spot.src_class_cd = '01';
+
+    IF terminal_spot_count < 2 THEN
+        RAISE EXCEPTION
+            '경로 탐색 가능한 시종점은 2개 이상이어야 합니다. 실제: %개',
+            terminal_spot_count;
+    END IF;
+
+    IF terminal_component_count <> 1 THEN
+        RAISE EXCEPTION
+            '시종점이 %개의 연결요소로 분리되어 있어 상호 경로 탐색이 불가능합니다.',
+            terminal_component_count;
+    END IF;
+END
+$$;
+
 -- 최종 데이터와 공간 형상을 검증한다.
 DO $$
 DECLARE
