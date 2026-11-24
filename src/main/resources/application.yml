@@ -33,6 +33,9 @@ orda:
     result-time-zone: ${ORDA_ANALYSIS_RESULT_TIME_ZONE}
   dem:
     base-directory: ${ORDA_DEM_BASE_DIRECTORY:}
+  trail-edge-elevation-backfill:
+    enabled: ${ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_ENABLED:false}
+    dem-id: ${ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_DEM_ID:0}
   auth:
     cors:
       allowed-origins: ${ORDA_AUTH_CORS_ALLOWED_ORIGINS:}

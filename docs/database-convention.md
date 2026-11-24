@@ -73,7 +73,8 @@ Windows에서는 `./mvnw.cmd antrun:run@create-flyway-migration -Dflyway.descrip
 ## 원천 데이터
 
 - Flyway는 스키마만 관리한다. 산림청 등산로, 상세지점, DEM 분석 결과 같은 원천 데이터를 Migration에 넣지 않는다.
-- 원천 데이터 적재 담당과 방법은 미확정이다. 확정 전에는 원천 데이터 테이블에 직접 쓰는 코드를 만들지 않는다.
+- 산림청 등산로·상세지점과 파생 네트워크·서비스 영역은 2026-11-23 사용자 승인에 따라 `database/seed/*_seed.sql`을 개발·운영 DB에 직접 수동 실행해 적재한다. 시드는 Flyway와 분리하며 파일 내부의 트랜잭션과 검증을 모두 통과해야 한다.
+- 전체 초기 적재와 산별 개별 실행 방법, DB 연결 설정 및 운영 주의사항은 [`database/seed/README.md`](../database/seed/README.md)를 따른다.
 - 원천 파일(SHP, GeoTIFF)과 DB 덤프는 Git에 올리지 않는다.
 
 Migration 또는 Mapper SQL 변경의 검증은 [testing-convention.md](testing-convention.md), 작업 리뷰 절차는 [git-convention.md](git-convention.md)를 따른다.
