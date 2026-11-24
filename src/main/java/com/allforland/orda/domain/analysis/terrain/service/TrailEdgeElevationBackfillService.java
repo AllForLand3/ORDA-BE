@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TrailEdgeElevationBackfillService {
 
     private static final BigDecimal SAMPLE_INTERVAL_M = new BigDecimal("20.0");
+    private static final int UPDATE_BATCH_SIZE = 1_000;
 
     private final TrailEdgeElevationBackfillMapper mapper;
     private final ElevationService elevationService;
@@ -105,7 +106,11 @@ public class TrailEdgeElevationBackfillService {
                             lastElevationM > firstElevationM ? "Y" : "N"));
         }
 
-        int updatedCount = mapper.updateAll(updates);
+        int updatedCount = 0;
+        for (int start = 0; start < updates.size(); start += UPDATE_BATCH_SIZE) {
+            int end = Math.min(start + UPDATE_BATCH_SIZE, updates.size());
+            updatedCount += mapper.updateAll(updates.subList(start, end));
+        }
         if (updatedCount != updates.size()) {
             throw new IllegalStateException(
                     "등산로 구간 고도 갱신 건수가 계산 결과와 다릅니다: expected="
