@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /** 공용 DEM으로 등산로 구간의 정방향 누적 상승·하강을 한 번에 계산한다. */
 @Service
@@ -27,6 +28,7 @@ public class TrailEdgeElevationBackfillService {
     private final ElevationService elevationService;
 
     /** MANUAL 값은 제외하고 UNKNOWN 또는 불완전한 DEM 값만 갱신한다. */
+    @Transactional
     public int backfill(long demId) {
         if (demId <= 0) {
             throw new IllegalArgumentException("DEM ID는 양수여야 합니다.");
