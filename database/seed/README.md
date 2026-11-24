@@ -76,6 +76,40 @@ bash ./database/seed/run_seed.sh inwang_seed.sql
 
 산별 SQL은 최초 적재 전용이다. 같은 산의 활성 데이터나 네트워크가 이미 있으면 파일 내부 검증에서 중단한다. 기존 데이터를 교체하거나 재적재하려면 참조 데이터 영향과 복구 방법을 별도로 검토해야 한다.
 
+## 서울권 공용 DEM 등록
+
+Copernicus GLO-30 원본 타일 2개와 두 타일을 병합한 파일을 다음 경로에 배치한다.
+
+| 용도 | 호스트 경로 | 컨테이너 경로 |
+|---|---|---|
+| 서쪽 원본 타일 | `database/dem/n37e126_dem.tif` | `/data/dem/n37e126_dem.tif` |
+| 동쪽 원본 타일 | `database/dem/n37e127_dem.tif` | `/data/dem/n37e127_dem.tif` |
+| 서울권 공용 DEM | `database/dem/seoul_copernicus_glo30.tif` | `/data/dem/seoul_copernicus_glo30.tif` |
+
+관악산 시드를 먼저 실행해야 한다. 공용 DEM은 EPSG:4326, 7200 x 3600 픽셀, 경도 126~128·위도 37~38 범위여야 한다. 파일 배치와 컨테이너의 `/data/dem` 읽기 전용 마운트를 확인한 뒤 별도 DEM 시드를 실행한다.
+
+```bash
+bash ./database/seed/run_seed.sh dem
+```
+
+DEM 시드는 기존 `N37E126` 자산의 파일명을 `n37e126_dem.tif`로 변경하고 `N37E127` 자산과 서울권 공용 자산을 등록한다. 원본 타일 2개는 출처 추적을 위해 유지하되 `use_yn = 'N'`으로 두고, 공용 DEM만 `use_yn = 'Y'`로 활성화한다. 실행 결과에 출력된 공용 `dem_id`를 모든 산의 신규 고도 분석 요청에 사용한다. 기존 분석 행이 참조하는 `dem_id`는 바뀌지 않는다.
+
+GeoTIFF 파일은 Git에 커밋하지 않는다. 다음 명령으로 SHA-256을 확인하고 시드에 기록된 값과 일치하는지 검증한다.
+
+```bash
+sha256sum database/dem/n37e127_dem.tif
+sha256sum database/dem/seoul_copernicus_glo30.tif
+```
+
+현재 시드에 기록된 해시는 다음과 같다.
+
+```sql
+N37E127: 4f8fef79da8c18ed9a9a0fb97b3d2695c4681181e013e039d87044e5479f7df6
+서울권 공용: a3e545058390babe4abe266d13d0cb4e9aef51e349a8893005f649cf7868ce9d
+```
+
+`run_seed.sh all`은 서버별 DEM 파일 배치 여부를 판단할 수 없으므로 DEM 시드를 자동 실행하지 않는다.
+
 ## 실행 확인
 
 스크립트는 실행 전에 접속한 DB, 사용자, 서버와 실행할 SQL 목록을 출력하고 확인을 요청한다. 표시된 대상이 의도한 DB와 다르면 `N`을 입력해 취소한다.
