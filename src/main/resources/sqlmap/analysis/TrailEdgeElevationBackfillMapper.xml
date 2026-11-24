@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.allforland.orda.domain.analysis.terrain.mapper.TrailEdgeElevationBackfillMapper">
+
+  <sql id="candidateCondition">
+    direction_basis_cd &lt;&gt; 'MANUAL'
+    AND (
+      direction_basis_cd &lt;&gt; 'DEM'
+      OR fwd_uphill_yn IS NULL
+      OR fwd_ascent_m IS NULL
+      OR fwd_descent_m IS NULL
+    )
+  </sql>
+
+  <select id="countCandidates" resultType="int" useCache="false">
+    SELECT count(*)::integer
+    FROM public.trail_edge
+    WHERE <include refid="candidateCondition"/>
+  </select>
+
+  <resultMap id="samplePointResult"
+             type="com.allforland.orda.domain.analysis.terrain.vo.TrailEdgeElevationSamplePoint">
+    <constructor>
+      <idArg column="edge_id" javaType="java.lang.Long"/>
+      <arg column="seq_no" javaType="java.lang.Integer"/>
+      <arg column="longitude" javaType="java.lang.Double"/>
+      <arg column="latitude" javaType="java.lang.Double"/>
+    </constructor>
+  </resultMap>
+
+  <select id="findSamplePoints" resultMap="samplePointResult" useCache="false">
+    WITH candidate AS (
+      SELECT
+        edge_id,
+        geom,
+        GREATEST(
+          1,
+          CEIL(ST_Length(geom) / CAST(#{sampleIntervalM} AS numeric))::integer
+        ) AS segment_count
+      FROM public.trail_edge
+      WHERE <include refid="candidateCondition"/>
+        AND ST_SRID(geom) = 5179
+        AND GeometryType(geom) = 'LINESTRING'
+        AND ST_NDims(geom) = 2
+        AND NOT ST_IsEmpty(geom)
+        AND ST_IsValid(geom)
+        AND ST_Length(geom) &gt; 0
+    ), sample AS (
+      SELECT
+        candidate.edge_id,
+        candidate.geom,
+        candidate.segment_count,
+        generate_series(0, candidate.segment_count) AS sample_index
+      FROM candidate
+    ), point AS (
+      SELECT
+        edge_id,
+        sample_index + 1 AS seq_no,
+        ST_Transform(
+          CASE
+            WHEN sample_index = 0 THEN ST_StartPoint(geom)
+            WHEN sample_index = segment_count THEN ST_EndPoint(geom)
+            ELSE ST_LineInterpolatePoint(
+              geom,
+              sample_index::double precision / segment_count::double precision
+            )
+          END,
+          4326
+        ) AS geom
+      FROM sample
+    )
+    SELECT
+      edge_id,
+      seq_no,
+      ST_X(geom) AS longitude,
+      ST_Y(geom) AS latitude
+    FROM point
+    ORDER BY edge_id, seq_no
+  </select>
+
+  <update id="updateAll" flushCache="true">
+    UPDATE public.trail_edge AS edge
+    SET fwd_ascent_m = value.fwd_ascent_m,
+        fwd_descent_m = value.fwd_descent_m,
+        fwd_uphill_yn = value.fwd_uphill_yn,
+        direction_basis_cd = 'DEM'
+    FROM (
+      VALUES
+      <foreach collection="rows" item="row" separator=",">
+        (
+          CAST(#{row.edgeId} AS bigint),
+          CAST(#{row.ascentM} AS numeric(7, 1)),
+          CAST(#{row.descentM} AS numeric(7, 1)),
+          CAST(#{row.uphillYn} AS char(1))
+        )
+      </foreach>
+    ) AS value(edge_id, fwd_ascent_m, fwd_descent_m, fwd_uphill_yn)
+    WHERE edge.edge_id = value.edge_id
+      AND edge.direction_basis_cd &lt;&gt; 'MANUAL'
+      AND (
+        edge.direction_basis_cd &lt;&gt; 'DEM'
+        OR edge.fwd_uphill_yn IS NULL
+        OR edge.fwd_ascent_m IS NULL
+        OR edge.fwd_descent_m IS NULL
+      )
+  </update>
+</mapper>

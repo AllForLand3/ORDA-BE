@@ -103,12 +103,55 @@ sha256sum database/dem/seoul_copernicus_glo30.tif
 
 현재 시드에 기록된 해시는 다음과 같다.
 
-```sql
+```text
 N37E127: 4f8fef79da8c18ed9a9a0fb97b3d2695c4681181e013e039d87044e5479f7df6
 서울권 공용: a3e545058390babe4abe266d13d0cb4e9aef51e349a8893005f649cf7868ce9d
 ```
 
 `run_seed.sh all`은 서버별 DEM 파일 배치 여부를 판단할 수 없으므로 DEM 시드를 자동 실행하지 않는다.
+
+## 등산로 구간 DEM 고도 백필
+
+공용 DEM 시드가 반환한 `dem_id`를 사용해 애플리케이션을 한 번 기동하면 `trail_edge`의 다음 값을 20m 이하 간격의 DEM 샘플로 계산한다.
+
+- `fwd_ascent_m`: `source_node_id`에서 `target_node_id` 방향의 누적 상승량
+- `fwd_descent_m`: 같은 방향의 누적 하강량
+- `fwd_uphill_yn`: 끝점 고도가 시작점보다 높으면 `Y`, 아니면 `N`
+- `direction_basis_cd`: 계산 완료 시 `DEM`
+
+별도 API 호출은 필요하지 않다. 서버 저장소 루트에서 `<공용 DEM ID>`를 실제 값으로 바꿔 한 번 실행한다.
+
+```bash
+ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_ENABLED=true \
+ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_DEM_ID=<공용 DEM ID> \
+docker compose up -d --build --force-recreate backend
+```
+
+`MANUAL`로 보정된 구간은 변경하지 않는다. 모든 샘플의 고도를 정상적으로 읽은 경우에만 갱신하며, 범위 밖·NoData·잘못된 구간 형상이 하나라도 있으면 백필을 중단한다. 성공 여부는 로그로 확인한다.
+
+```bash
+docker logs orda-api 2>&1 | grep TRAIL_EDGE_ELEVATION_BACKFILL
+```
+
+성공 로그를 확인한 뒤 백필을 비활성화한 구성으로 컨테이너를 다시 생성한다.
+
+```bash
+ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_ENABLED=false \
+ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_DEM_ID=0 \
+docker compose up -d --force-recreate backend
+```
+
+```sql
+SELECT direction_basis_cd, count(*)
+FROM public.trail_edge
+GROUP BY direction_basis_cd
+ORDER BY direction_basis_cd;
+
+SELECT count(*) AS incomplete_edge_count
+FROM public.trail_edge
+WHERE direction_basis_cd = 'DEM'
+  AND (fwd_ascent_m IS NULL OR fwd_descent_m IS NULL OR fwd_uphill_yn IS NULL);
+```
 
 ## 실행 확인
 
