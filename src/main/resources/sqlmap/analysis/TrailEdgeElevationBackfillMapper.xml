@@ -21,10 +21,10 @@
   <resultMap id="samplePointResult"
              type="com.allforland.orda.domain.analysis.terrain.vo.TrailEdgeElevationSamplePoint">
     <constructor>
-      <idArg column="edge_id" javaType="java.lang.Long"/>
-      <arg column="seq_no" javaType="java.lang.Integer"/>
-      <arg column="longitude" javaType="java.lang.Double"/>
-      <arg column="latitude" javaType="java.lang.Double"/>
+      <idArg column="edge_id" javaType="_long"/>
+      <arg column="seq_no" javaType="_int"/>
+      <arg column="longitude" javaType="_double"/>
+      <arg column="latitude" javaType="_double"/>
     </constructor>
   </resultMap>
 
