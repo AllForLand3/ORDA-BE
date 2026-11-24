@@ -46,6 +46,10 @@ public enum ErrorCode {
     ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "출발 지점과 도착 지점을 잇는 경로를 찾을 수 없습니다."),
     ROUTE_SNAP_FAILED(HttpStatus.NOT_FOUND, "선택한 위치 근처에서 경로 지점을 찾을 수 없습니다."),
 
+    // Chat
+    CHAT_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "챗봇 설정이 되어 있지 않습니다."),
+    CHAT_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "챗봇이 답변하지 못했습니다. 잠시 후 다시 시도해주세요."),
+
     DEM_DIRECTORY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "DEM 저장 디렉터리 설정을 확인해야 합니다."),
     DEM_FILE_PATH_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일 경로 설정이 올바르지 않습니다."),
     DEM_FILE_OUTSIDE_DIRECTORY(HttpStatus.SERVICE_UNAVAILABLE, "DEM 파일이 허용된 저장 범위 밖에 있습니다."),
