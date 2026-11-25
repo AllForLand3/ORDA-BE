@@ -1222,18 +1222,25 @@ BEGIN
 END
 $$;
 
--- 경로 탐색의 출발·도착 후보인 시종점이 서로 도달 가능한지 검증한다.
--- 시종점은 가장 가까운 edge에 매칭되므로 해당 edge의 source 노드 component_no로
--- 연결요소를 판정한다. 시종점이 추가되더라도 모든 후보가 서로 경로 탐색 가능해야 한다.
+-- 경로 탐색의 출발·도착 후보인 시종점이 유효한 연결요소에 매칭됐는지 검증한다.
+-- 인왕산 원천 등산로는 여러 독립 연결요소로 구성되므로 모든 시종점의 상호 도달성을
+-- 강제하지 않는다. 서로 다른 연결요소 사이의 요청은 경로 없음으로 처리한다.
 DO $$
 DECLARE
     terminal_spot_count bigint;
+    matched_terminal_spot_count bigint;
     terminal_component_count bigint;
 BEGIN
+    SELECT COUNT(*)
+    INTO terminal_spot_count
+    FROM public.trail_spot AS spot
+    WHERE spot.mountain_id = current_setting('orda.seed.mountain_id')::integer
+      AND spot.src_class_cd = '01';
+
     SELECT
         COUNT(DISTINCT spot.spot_id),
         COUNT(DISTINCT source_node.component_no)
-    INTO terminal_spot_count, terminal_component_count
+    INTO matched_terminal_spot_count, terminal_component_count
     FROM public.trail_spot AS spot
     JOIN public.spot_edge_match AS match
       ON match.spot_id = spot.spot_id
@@ -1249,13 +1256,24 @@ BEGIN
 
     IF terminal_spot_count < 2 THEN
         RAISE EXCEPTION
-            '경로 탐색 가능한 시종점은 2개 이상이어야 합니다. 실제: %개',
+            '시종점은 2개 이상이어야 합니다. 실제: %개',
             terminal_spot_count;
     END IF;
 
-    IF terminal_component_count <> 1 THEN
+    IF matched_terminal_spot_count <> terminal_spot_count THEN
         RAISE EXCEPTION
-            '시종점이 %개의 연결요소로 분리되어 있어 상호 경로 탐색이 불가능합니다.',
+            '유효한 연결요소에 매칭되지 않은 시종점이 있습니다. 전체: %개, 매칭: %개',
+            terminal_spot_count,
+            matched_terminal_spot_count;
+    END IF;
+
+    IF terminal_component_count < 1 THEN
+        RAISE EXCEPTION '시종점이 매칭된 연결요소가 없습니다.';
+    END IF;
+
+    IF terminal_component_count > 1 THEN
+        RAISE NOTICE
+            '인왕산 시종점은 %개의 독립 연결요소에 분포합니다. 연결요소 간 경로는 제공하지 않습니다.',
             terminal_component_count;
     END IF;
 END
