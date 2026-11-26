@@ -48,7 +48,7 @@ public class ChatService {
             AuthService auth,
             ChatKnowledge knowledge,
             ChatRateLimiter rateLimiter,
-            @Value("${orda.chat.model:claude-opus-5-5}") String model,
+            @Value("${orda.chat.model:claude-sonnet-5-5}") String model,
             @Value("${orda.chat.max-tokens:4096}") long maxTokens,
             @Value("${orda.chat.api-key:}") String apiKey) {
         if (model == null || model.isBlank() || maxTokens <= 0) {

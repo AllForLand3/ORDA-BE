@@ -48,7 +48,7 @@ orda:
   chat:
     # 비어 있으면 챗봇 요청만 CHAT_NOT_CONFIGURED로 응답한다.
     api-key: ${ANTHROPIC_API_KEY:}
-    model: ${ORDA_CHAT_MODEL:claude-opus-5-5}
+    model: ${ORDA_CHAT_MODEL:claude-sonnet-5-5}
     max-tokens: 4096
     rate-limit:
       max-requests: 20
