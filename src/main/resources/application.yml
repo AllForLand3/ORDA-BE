@@ -45,6 +45,14 @@ orda:
   route:
     # 스냅 허용 거리 기준 확정 전 임시 값
     snap-max-distance-m: ${ORDA_ROUTE_SNAP_MAX_DISTANCE_M:300}
+  chat:
+    # 비어 있으면 챗봇 요청만 CHAT_NOT_CONFIGURED로 응답한다.
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${ORDA_CHAT_MODEL:claude-sonnet-5-5}
+    max-tokens: 4096
+    rate-limit:
+      max-requests: 20
+      window-minutes: 10
 server:
   error:
     include-message: never

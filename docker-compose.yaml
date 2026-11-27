@@ -22,6 +22,9 @@ services:
       ORDA_DEM_BASE_DIRECTORY: /data/dem
       ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_ENABLED: ${ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_ENABLED:-false}
       ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_DEM_ID: ${ORDA_TRAIL_EDGE_ELEVATION_BACKFILL_DEM_ID:-0}
+      # 비어 있으면 챗봇만 비활성화된다.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ORDA_CHAT_MODEL: ${ORDA_CHAT_MODEL:-claude-sonnet-5-5}
     volumes:
       - ./database/dem:/data/dem:ro
     networks:

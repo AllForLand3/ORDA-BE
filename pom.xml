@@ -20,6 +20,10 @@
     <mybatis-spring-boot.version>2.3.2</mybatis-spring-boot.version>
     <springdoc.version>1.8.0</springdoc.version>
     <geotools.version>34.6</geotools.version>
+    <!-- anthropic-java needs newer versions than Spring Boot 2.7 manages -->
+    <jackson-bom.version>2.19.4</jackson-bom.version>
+    <kotlin.version>1.9.25</kotlin.version>
+    <okhttp.version>4.12.0</okhttp.version>
   </properties>
   <repositories>
     <repository>
@@ -44,6 +48,11 @@
     </repository>
   </repositories>
   <dependencies>
+    <dependency>
+      <groupId>com.anthropic</groupId>
+      <artifactId>anthropic-java</artifactId>
+      <version>3.3.0</version>
+    </dependency>
     <!-- GeoTIFF reading, coordinate transformations and EPSG definitions. -->
     <dependency>
       <groupId>org.geotools</groupId>
